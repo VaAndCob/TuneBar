@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "*.app": "html",
+        "*.bak": "cpp",
+        "user_config.h": "c",
+        "helper.h": "c",
+        "vector": "cpp"
+    }
+}

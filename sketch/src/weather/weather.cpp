@@ -496,8 +496,8 @@ static ui_anim_user_data_t cat_move_ud;
 static ui_anim_user_data_t dog_sprite_ud;
 static ui_anim_user_data_t dog_move_ud;
 
-int last_x_cat = 200;
-int last_x_dog = 300;
+int last_x_cat = lv_obj_get_x(ui_Info_Image_cat);
+int last_x_dog = lv_obj_get_x(ui_Info_Image_dog);
 int target_x_cat = 0;
 int target_x_dog = 0;
 int travel_time = 0;

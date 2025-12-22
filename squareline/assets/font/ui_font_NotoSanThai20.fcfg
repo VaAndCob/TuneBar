@@ -1,0 +1,16 @@
+{
+  "codename": "NotoSanThai20",
+  "ttf_path": "/assets/font/NotoSansThai-Regular.ttf",
+  "bin_path": "/assets/font/ui_font_NotoSanThai20.bin",
+  "c_path": "/assets/font/ui_font_NotoSanThai20.c",
+  "cfg_path": "/assets/font/ui_font_NotoSanThai20.fcfg",
+  "size": 16,
+  "bpp": 2,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7f"
+  ],
+  "symbols": "กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮะาำิีึืุูเแโใไ่้๊๋็ัฯ์?๑๒๓๔๕๖๗๘๙ๅ๐ๆ",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

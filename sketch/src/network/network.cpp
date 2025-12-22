@@ -1,0 +1,338 @@
+#include "network.h"
+#include "file/file.h"
+#include "pcf85063/pcf85063.h"
+#include "task_msg/task_msg.h"
+#include "ui/ui.h"
+#include "weather/weather.h"
+#include "esp32-hal.h"
+#include <ArduinoJson.h>
+#include <HTTPClient.h>
+#include <LittleFS.h>
+#include <WiFi.h>
+#include <stdint.h>
+
+extern PCF85063 rtc;
+// #define USE_SSL
+
+#ifdef USE_SSL
+#include <WiFiClientSecure.h>
+#endif
+
+#define WIFI_CONNECT_TIMEOUT_MS 5000
+#define WIFI_MAX 10
+#define WIFI_FILE "/wifi.json"
+
+WifiEntry wifiList[WIFI_MAX];
+
+byte networks = 0;
+static TaskHandle_t wifiTask = NULL;
+
+// ---------------------- LOAD WIFI LIST ----------------------
+int loadWifiList(WifiEntry list[]) {
+
+  // Ensure wifi.json exists
+  if (!LittleFS.exists("/wifi.json")) {
+    log_w("wifi.json not found → creating empty file");
+
+    File f = LittleFS.open("/wifi.json", "w");
+    if (!f) {
+      log_e("Failed to create wifi.json");
+      return false;
+    }
+
+    f.print("[]"); // create empty JSON array
+    f.close();
+  }
+
+  File f = LittleFS.open(WIFI_FILE, "r");
+  if (!f) return 0;
+
+  JsonDocument doc;
+
+  DeserializationError err = deserializeJson(doc, f);
+  f.close();
+
+  if (err) {
+    log_w("JSON parse failed → recreating file.");
+    File f2 = LittleFS.open(WIFI_FILE, "w");
+    f2.print("[]");
+    f2.close();
+    return 0;
+  }
+
+  log_d("Wi-Fi Credential List");
+  int count = doc.size();
+  if (count > WIFI_MAX) count = WIFI_MAX;
+  for (int i = 0; i < count; i++) {
+    list[i].ssid = doc[i]["ssid"].as<String>();
+    list[i].password = doc[i]["password"].as<String>();
+    String txt = String(i + 1) + ": " + list[i].ssid + ", " + list[i].password; // debug print "ssid, password
+    log_d("%s", txt.c_str());
+  }
+
+  return count;
+}
+
+// ---------------------- SAVE WIFI LIST ----------------------
+void saveWifiList(WifiEntry list[], int count) {
+  JsonDocument doc;
+  for (int i = 0; i < count; i++) {
+    JsonObject obj = doc.add<JsonObject>();
+    obj["ssid"] = list[i].ssid;
+    obj["password"] = list[i].password;
+  }
+  File f = LittleFS.open(WIFI_FILE, "w");
+  serializeJson(doc, f);
+  f.close();
+}
+
+// ---------------------- ADD / UPDATE ENTRY ----------------------
+int addOrUpdateWifi(const char *ssid, const char *password, WifiEntry list[], int count) {
+  // 1) Check if SSID already exists
+  for (int i = 0; i < count; i++) {
+    if (list[i].ssid == ssid) {
+      // Update password + move to top
+      for (int j = i; j > 0; j--) list[j] = list[j - 1];
+      list[0].ssid = ssid;
+      list[0].password = password;
+      return count;
+    }
+  }
+
+  // 2) New SSID
+  if (count < WIFI_MAX) {
+    // Shift downward
+    for (int i = count; i > 0; i--) list[i] = list[i - 1];
+    list[0] = {ssid, password};
+    return count + 1;
+  } else {
+    // Overwrite oldest (index 9)
+    for (int i = WIFI_MAX - 1; i > 0; i--) list[i] = list[i - 1];
+    list[0] = {ssid, password};
+    return WIFI_MAX;
+  }
+}
+
+// Discovery wifi network
+
+void scanWiFi(bool updateList) {
+   if (updateList) updateWiFiOption("Scaning..."); // clear wifi dropdown
+
+  bool isAsync = (WiFi.status() == WL_CONNECTED);
+
+  if (isAsync) {
+    // --- Asynchronous Scan ---
+    log_d("Scanning for Wi-Fi networks (async): ");
+    if (WiFi.scanNetworks(true) == WIFI_SCAN_FAILED) {
+      log_e("Async scan failed to start");
+      networks = 0;
+      return;
+    }
+
+    unsigned long startAttemptTime = millis();
+    int16_t scanResult;
+    while ((scanResult = WiFi.scanComplete()) == WIFI_SCAN_RUNNING) {
+      if (millis() - startAttemptTime > WIFI_CONNECT_TIMEOUT_MS) {
+        WiFi.scanDelete(); // Clean up even on timeout
+        networks = 0;
+        log_e("Async scan timed out.");
+        return;
+      }
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    networks = (scanResult > 0) ? scanResult : 0;
+
+} else {
+    // --- Synchronous (Blocking) Scan ---
+    log_d("Preparing for blocking scan...");
+    // 1. บังคับปิดและลบข้อมูลสแกนเดิม
+    WiFi.scanDelete(); 
+    WiFi.disconnect(true); // ปิดการเชื่อมต่อเดิมทั้งหมด
+    WiFi.mode(WIFI_OFF);   // ปิดวิทยุชั่วคราว
+    vTaskDelay(pdMS_TO_TICKS(100));
+    // 2. เริ่มต้นระบบ Wi-Fi ใหม่
+    WiFi.mode(WIFI_STA); 
+    vTaskDelay(pdMS_TO_TICKS(200)); // ให้เวลา Driver ตื่นขึ้นมา
+    log_d("Scanning for Wi-Fi networks (blocking): ");
+    // 3. สั่งสแกน
+    int16_t scanResult = WiFi.scanNetworks();
+    
+    if (scanResult < 0) {
+        log_e("Scan failed with error code: %d", scanResult);
+        // ถ้ายังล้มเหลว ลองสั่ง WiFi.scanDelete() อีกรอบเพื่อ Reset
+        WiFi.scanDelete();
+        networks = 0;
+    } else {
+        networks = (uint8_t)scanResult;
+        log_d("%d networks found", networks);
+    }
+}
+  // --- Process and Display Results (common part) ---
+
+  String SSIDs = "";
+  for (byte i = 0; i < networks; ++i) {
+    String txt = String(i + 1) + ": " + WiFi.SSID(i) + "  Ch " + WiFi.channel(i) + " (" + WiFi.RSSI(i) + ")";
+    log_d("%s", txt.c_str());
+    if (i != networks - 1)
+      SSIDs = SSIDs + WiFi.SSID(i) + "\n";
+    else
+      SSIDs = SSIDs + WiFi.SSID(i);
+  }
+
+  if (updateList) updateWiFiOption(SSIDs.c_str()); // add wifi dropdown
+  // --- Cleanup ---
+  if (isAsync) {
+    WiFi.scanDelete(); // Crucial for async scan
+  }
+}
+
+//-----------------------------------------
+//check connection status and attemp to connect every 30 second
+void wifi_connect_task(void *param) {
+
+  for (;;) {
+    if (WiFi.status() != WL_CONNECTED) {
+      if (WiFi.getMode() != WIFI_STA) WiFi.mode(WIFI_STA);
+      vTaskDelay(pdMS_TO_TICKS(100));
+      uint8_t wifiCount = loadWifiList(wifiList);
+      log_d("Loaded %d Wi-Fi credentials", wifiCount);
+      updateWiFiStatus("Scanning...", 0x00FF00, 0x777777);
+
+      scanWiFi(false); // scan wifi but don't update dropdown
+      if (networks == 0) { // no network in this area
+        log_d("No Wi-Fi networks found");
+        updateWiFiStatus("No Wi-Fi networks found.", 0xFF0000, 0x777777);
+        vTaskDelay(pdMS_TO_TICKS(300));
+
+      } else {
+
+        // check matching network with the list in wifi.json
+        uint8_t matchIndex[10]; // keep the index of match ssid from wifiList.ssid
+        uint8_t matchCount = 0;
+        for (byte i = 0; i < networks; ++i) {
+          String ss = WiFi.SSID(i);
+          // ss.trim();
+          log_d("Checking SSID: %s", ss.c_str());
+          for (int k = 0; k < wifiCount; ++k) {
+            String stored = wifiList[k].ssid;
+            //  stored.trim();
+
+            if (stored.equals(ss)) {
+              if (matchCount < sizeof(matchIndex)) {
+                matchIndex[matchCount++] = k;
+                log_d("Match found: %s", ss.c_str());
+              } else {
+                log_w("More matches than buffer; ignoring extras");
+              }
+            }
+          }
+        } // for
+
+        log_d("Total match: %d", matchCount);
+
+        if (matchCount == 0) {
+          log_d("No network matched.");
+          updateWiFiStatus("No network matched.", 0xFF0000, 0x777777);
+          vTaskDelay(pdMS_TO_TICKS(300));
+
+        } else {
+
+          // try to connect all matched wifi ssid
+          for (uint8_t idx = 0; idx < matchCount; idx++) {
+            String networkName = wifiList[matchIndex[idx]].ssid;
+            String attemptMsg = "Attempt connecting to " + networkName;
+            log_d("%s", attemptMsg.c_str());
+
+            // attempt to connect wifi
+            if (WiFi.status() == WL_CONNECTED) WiFi.disconnect(true);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            WiFi.begin(wifiList[matchIndex[idx]].ssid.c_str(), wifiList[matchIndex[idx]].password.c_str());
+
+            unsigned long startAttemptTime = millis();
+            while (WiFi.status() != WL_CONNECTED && (millis() - startAttemptTime < WIFI_CONNECT_TIMEOUT_MS)) {
+              vTaskDelay(pdMS_TO_TICKS(500)); // shorter step for snappier responsiveness
+              log_d(".");
+            }
+
+            if (WiFi.status() == WL_CONNECTED) {
+              String connectedMsg = "Connected to " + networkName;
+              log_d("%s", connectedMsg.c_str());
+              updateWiFiStatus(connectedMsg.c_str(), 0x00FF00, 0x0000FF);
+              // audioPlayFS(1, "/audio/ding.mp3");
+              rtc.ntp_sync(UTC_offset_hour[offset_hour_index], UTC_offset_minute[offset_minute_index]);
+              rtc.calibratBySeconds(0, 0.0); // mode 0 (eery 2 second, diff_time/total_calibrate_time)
+              updateWeatherPanel();//update weather condition once after internet connected
+            } else {
+              log_w("Wrong Wi-Fi password or timeout for %s", networkName.c_str());
+              updateWiFiStatus("Wrong Wi-Fi password or timeout", 0xFF0000, 0x777777);
+            }
+          } // for each match
+        } // If we
+      }
+    } //wifi connected
+     UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
+    log_d("{ Task stack remaining MIN: %u bytes }", hwm);
+    vTaskDelay(pdMS_TO_TICKS(30000));
+
+  }
+}
+
+void wifiConnect() {
+  if (wifiTask == NULL) xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 4 * 1024, NULL, 1, &wifiTask, 0);
+}
+
+// -------------  Function to fetch data -------------------
+String fetchUrlData(const char *url) {
+  String payload = "";
+#ifdef USE_SSL
+  WiFiClientSecure client;
+  client.setInsecure(); // Disable certificate validation
+#else
+  WiFiClient client;
+#endif
+
+  if (WiFi.status() != WL_CONNECTED) {
+    log_e("WiFi not connected. Cannot fetch data.");
+    return "";
+  }
+
+  log_d("Fetching URL: %s", url);
+  HTTPClient http;
+#ifdef USE_SSL
+  http.begin(client, url);
+#else
+  http.begin(url);
+#endif
+
+  // http.begin(client, url);
+  http.begin(url);
+  int httpResponseCode = http.GET();
+
+  if (httpResponseCode > 0) {
+    // Handle potential redirection
+    if (httpResponseCode == HTTP_CODE_MOVED_PERMANENTLY || httpResponseCode == HTTP_CODE_FOUND) {
+      String newUrl = http.header("Location");
+      http.end(); // End the current connection before starting a new one
+#ifdef USE_SSL
+      http.begin(client, newUrl.c_str()); // Begin new request with the new URL
+#else
+      http.begin(newUrl.c_str()); // Begin new request with the new URL
+#endif
+
+      httpResponseCode = http.GET(); // Send the GET request to the new URL
+      if (httpResponseCode > 0) {
+        payload = http.getString(); // Get payload from redirected URL
+      } else {
+        log_e("[HTTP] GET failed, error: %s", http.errorToString(httpResponseCode).c_str());
+      }
+    } else {
+      payload = http.getString(); // Get payload from original URL
+    }
+  } else {
+    log_e("[HTTP] GET failed, error: %s", http.errorToString(httpResponseCode).c_str());
+  }
+  http.end();
+
+  log_d("Payload: %s", payload.c_str());
+  return payload;
+}

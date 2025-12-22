@@ -74,9 +74,8 @@ lv_fs_res_t fs_seek(lv_fs_drv_t *drv, void *file_p, uint32_t pos, lv_fs_whence_t
   return LV_FS_RES_OK;
 }
 
-
-
-
+//------------------------------------------------
+//init LittleFS
 void initLittleFS() {
   if (!LittleFS.begin(false)) {
     log_e("LittleFS mount failed. Formatting...");
@@ -87,15 +86,19 @@ void initLittleFS() {
   } else {
     log_d("LittleFS mounted successfully.");
 
+    //show littlefs free space
+    uint32_t total = LittleFS.totalBytes();
+    uint32_t used = LittleFS.usedBytes();
+    float percentage = (total > 0) ? ((float)used / total) * 100.0 : 0.0;
+    log_i("LittleFS:%5.1f%% (used %u bytes from %u bytes)\n",percentage, used, total);
+
     lv_fs_drv_t drv;
     lv_fs_drv_init(&drv);
-
     drv.letter = 'L';
     drv.open_cb = fs_open;
     drv.close_cb = fs_close;
     drv.read_cb = fs_read;
     drv.seek_cb = fs_seek;
-
     lv_fs_drv_register(&drv);
   }
 }

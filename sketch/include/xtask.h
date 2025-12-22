@@ -1,10 +1,7 @@
-#include "file/file.h"
-
 /* For RTOS Task function.
 All task setting  Stack size and Priority and Core
 
-CORE 1
-
+CORE 1:
   m_audioTaskHandle = xTaskCreateStaticPinnedToCore(
         &Audio::taskWrapper, "PeriodicTask", 3300, this, 6, xAudioStack,  &xAudioTaskBuffer, 1);
   xTaskCreatePinnedToCore(audio_loop_task, "audio_loop", 4 * 1024, NULL, 4, NULL, 1);
@@ -15,15 +12,32 @@ CORE 1
  xTaskCreatePinnedToCore(scan_music_task, "SD_Scan_Task", 6 * 1024, NULL, 1, NULL, 1);(create and delete)
  xTaskCreatePinnedToCore(updateWeatherPanelTask,"To update weather panel", 2 * 1024, NULL,3, NULL, 1);(create and delete)
 
-CORE 0
+CORE 0:
  xTaskCreatePinnedToCore(WAVESHARE_349_lvgl_port_task, "LVGL", 16384, NULL, 5, NULL, 0); // Run Core 0
-
 xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 1, &wifiTask, 0);(create and delete)
-
 */
-
+#include "file/file.h"
 #include "task_msg/task_msg.h"
 
+//==============================================
+// Memory Check Function
+void memory_info() {
+  log_d("\n--- Memory Status ---");
+  size_t freeHeap = ESP.getFreeHeap();
+  size_t totalHeap = ESP.getHeapSize();
+  log_d("Heap: %u / %u bytes free (%.2f%%)\n", freeHeap, totalHeap, (freeHeap * 100.0 / totalHeap));
+  log_d("Min Free Heap: %u bytes\n", ESP.getMinFreeHeap());
+  log_d("Max Alloc Block: %u bytes\n", ESP.getMaxAllocHeap());
+  if (psramFound()) {
+    size_t freePSRAM = ESP.getFreePsram();
+    size_t totalPSRAM = ESP.getPsramSize();
+    log_d("PSRAM: %u / %u bytes free\n", freePSRAM, totalPSRAM);
+  } else {
+    log_d("PSRAM: Not found");
+  }
+  UBaseType_t stackLeft = uxTaskGetStackHighWaterMark(NULL);
+  log_d("Current Task Stack Left: %u words (%u bytes)\n", stackLeft, stackLeft * 4);
+}
 
 //==============================================
 // BUTTON INPUT TASK:
@@ -322,24 +336,33 @@ void audio_loop_task(void *param) {
 }
 //--------------------------------------------------------------
 
-void memory_info() {
-  log_d("\n--- Memory Status ---");
-  size_t freeHeap = ESP.getFreeHeap();
-  size_t totalHeap = ESP.getHeapSize();
-  log_d("Heap: %u / %u bytes free (%.2f%%)\n", freeHeap, totalHeap, (freeHeap * 100.0 / totalHeap));
-  log_d("Min Free Heap: %u bytes\n", ESP.getMinFreeHeap());
-  log_d("Max Alloc Block: %u bytes\n", ESP.getMaxAllocHeap());
-  if (psramFound()) {
-    size_t freePSRAM = ESP.getFreePsram();
-    size_t totalPSRAM = ESP.getPsramSize();
-    log_d("PSRAM: %u / %u bytes free\n", freePSRAM, totalPSRAM);
-  } else {
-    log_d("PSRAM: Not found");
-  }
-  UBaseType_t stackLeft = uxTaskGetStackHighWaterMark(NULL);
-  log_d("Current Task Stack Left: %u words (%u bytes)\n", stackLeft, stackLeft * 4);
-}
 
+void checkLittleFSSpace() {
+    // Initialize LittleFS
+    if (!LittleFS.begin()) {
+        log_e("An Error has occurred while mounting LittleFS");
+        return;
+    }
+    uint32_t total = LittleFS.totalBytes();
+    uint32_t used = LittleFS.usedBytes();
+    
+    float percentage = (total > 0) ? ((float)used / total) * 100.0 : 0.0;
+
+    const int barWidth = 10; // Number of characters inside the brackets
+    int filledWidth = (int)((percentage / 100.0) * barWidth);
+
+    String bar = "LittleFS: [";
+    for (int i = 0; i < barWidth; i++) {
+        if (i < filledWidth) {
+           bar += "=";
+        } else {
+           bar += " ";
+        }
+    }
+    bar += ("] ");
+    Serial.printf("%5.1f%% (used %u bytes from %u bytes)\n", 
+                  percentage, used, total);
+}
 
 /*
 //------------- Micro phone task -------------------------

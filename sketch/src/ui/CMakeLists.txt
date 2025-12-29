@@ -1,7 +1,8 @@
 SET(SOURCES screens/ui_Screen_Boot.c
     screens/ui_Screen_MainMenu.c
-    screens/ui_Screen_Player.c
     screens/ui_Screen_Info.c
+    screens/ui_Screen_Player.c
+    screens/ui_Screen_Utility.c
     ui.c
     components/ui_comp_hook.c
     ui_helpers.c
@@ -11,12 +12,11 @@ SET(SOURCES screens/ui_Screen_Boot.c
     images/ui_img_images_music_png.c
     images/ui_img_images_assistant_png.c
     images/ui_img_images_climate_png.c
+    images/ui_img_images_utility_png.c
     images/ui_img_images_settings_png.c
     images/ui_img_images_globe_png.c
     images/ui_img_images_timezone_png.c
-    images/ui_img_images_qr_png.c
     images/ui_img_images_button_png.c
-    images/ui_img_images_mute_png.c
     images/ui_img_numbers_0_png.c
     images/ui_img_numbers_colon_png.c
     images/ui_img_weather_home_sunny_png.c
@@ -24,6 +24,10 @@ SET(SOURCES screens/ui_Screen_Boot.c
     images/ui_img_weather_propeller_png.c
     images/ui_img_custom_cat_right1_png.c
     images/ui_img_custom_dog_left1_png.c
+    images/ui_img_images_mute_png.c
+    images/ui_img_images_torch_png.c
+    images/ui_img_images_systeminfo_png.c
+    images/ui_img_images_qr_png.c
     images/ui_img_aqi_good_png.c
     images/ui_img_aqi_hazardous_png.c
     images/ui_img_aqi_moderate_png.c

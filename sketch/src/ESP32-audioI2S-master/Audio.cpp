@@ -196,22 +196,31 @@ Audio::Audio(uint8_t i2sPort) {
     m_i2s_chan_cfg.dma_frame_num = 512;        // I2S frame number in one DMA buffer.
     m_i2s_chan_cfg.auto_clear = true;          // i2s will always send zero automatically if no data to send
     m_i2s_chan_cfg.allow_pd = false;
-    i2s_new_channel(&m_i2s_chan_cfg, &m_i2s_tx_handle, NULL);
+    i2s_new_channel(&m_i2s_chan_cfg, &m_i2s_tx_handle,&m_i2s_rx_handle);
+    assert(m_i2s_tx_handle != NULL);
+    assert(m_i2s_rx_handle != NULL);
 
     memset(&m_i2s_std_cfg, 0, sizeof(i2s_std_config_t));
     m_i2s_std_cfg.slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO); // Set to enable bit shift in Philips mode
     m_i2s_std_cfg.gpio_cfg.bclk = I2S_GPIO_UNUSED;                                                                // BCLK, Assignment in setPinout()
-    m_i2s_std_cfg.gpio_cfg.din = I2S_GPIO_UNUSED;                                                                 // not used
+    m_i2s_std_cfg.gpio_cfg.din = I2S_GPIO_UNUSED;                                                                 // DIN, Assignment in setPinout()
     m_i2s_std_cfg.gpio_cfg.dout = I2S_GPIO_UNUSED;                                                                // DOUT, Assignment in setPinout()
     m_i2s_std_cfg.gpio_cfg.mclk = I2S_GPIO_UNUSED;                                                                // MCLK, Assignment in setPinout()
     m_i2s_std_cfg.gpio_cfg.ws = I2S_GPIO_UNUSED;                                                                  // LRC,  Assignment in setPinout()
     m_i2s_std_cfg.gpio_cfg.invert_flags.mclk_inv = false;
     m_i2s_std_cfg.gpio_cfg.invert_flags.bclk_inv = false;
     m_i2s_std_cfg.gpio_cfg.invert_flags.ws_inv = false;
+    m_i2s_std_cfg.slot_cfg.slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT;
     m_i2s_std_cfg.clk_cfg.sample_rate_hz = 48000;
     m_i2s_std_cfg.clk_cfg.clk_src = I2S_CLK_SRC_DEFAULT;         // Select PLL_F160M as the default source clock
-    m_i2s_std_cfg.clk_cfg.mclk_multiple = I2S_MCLK_MULTIPLE_128; // mclk = sample_rate * 256
+    m_i2s_std_cfg.clk_cfg.mclk_multiple = I2S_MCLK_MULTIPLE_256; // mclk = sample_rate * 256
     i2s_channel_init_std_mode(m_i2s_tx_handle, &m_i2s_std_cfg);
+    i2s_channel_init_std_mode(m_i2s_rx_handle, &m_i2s_std_cfg);
+/*
+    int32_t dummy[1024] = {0};
+    size_t n;
+    i2s_channel_write(m_i2s_tx_handle , dummy, sizeof(dummy), &n, 1000);
+*/
     I2Sstart();
     m_sampleRate = m_i2s_std_cfg.clk_cfg.sample_rate_hz;
 
@@ -230,6 +239,8 @@ Audio::~Audio() {
     stopSong();
     setDefaults();
 
+    i2s_channel_disable(m_i2s_rx_handle);
+    i2s_del_channel(m_i2s_rx_handle);
     i2s_channel_disable(m_i2s_tx_handle);
     i2s_del_channel(m_i2s_tx_handle);
     stopAudioTask();
@@ -266,14 +277,20 @@ void Audio::initInBuff() {
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 esp_err_t Audio::I2Sstart() {
     zeroI2Sbuff();
-    return i2s_channel_enable(m_i2s_tx_handle);
+    bool ok = true;
+    ok |= i2s_channel_enable(m_i2s_tx_handle);
+    ok |= i2s_channel_enable(m_i2s_rx_handle);
+    return ok;
 }
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 esp_err_t Audio::I2Sstop() {
     m_outBuff.clear();                                                  // Clear OutputBuffer
     m_samplesBuff48K.clear();                                           // Clear samplesBuff48K
     std::fill(std::begin(m_inputHistory), std::end(m_inputHistory), 0); // Clear history in samplesBuff48K
-    return i2s_channel_disable(m_i2s_tx_handle);
+        bool ok = true;
+    ok |= i2s_channel_disable(m_i2s_tx_handle);
+    ok |= i2s_channel_disable(m_i2s_rx_handle);
+    return ok;
 }
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 void Audio::zeroI2Sbuff() {
@@ -5466,32 +5483,30 @@ void Audio::calculateAudioTime(uint16_t bytesDecoderIn, uint16_t bytesDecoderOut
 }
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 bool Audio::setPinout(uint8_t BCLK, uint8_t LRC, uint8_t DOUT, int8_t MCLK, int8_t DIN) {
-
     m_f_psramFound = psramInit();
-
     m_outBuff.alloc(m_outbuffSize, "m_outBuff");
     m_samplesBuff48K.alloc(m_samplesBuff48KSize * sizeof(int16_t));
 
-    esp_err_t result = ESP_OK;
+    if (!m_i2s_tx_handle || !m_i2s_rx_handle) return false;
 
-#if (ESP_ARDUINO_VERSION_MAJOR < 3)
-    AUDIO_LOG_ERROR("Arduino Version must be 3.0.0 or higher!");
-#endif
-    trim(audioI2SVers);
-    info(*this, evt_info, "audioI2S %s", audioI2SVers);
+     I2Sstop();
 
     i2s_std_gpio_config_t gpio_cfg = {};
     gpio_cfg.bclk = (gpio_num_t)BCLK;
-    gpio_cfg.din = (gpio_num_t)DIN;
+    gpio_cfg.ws   = (gpio_num_t)LRC;
     gpio_cfg.dout = (gpio_num_t)DOUT;
+    gpio_cfg.din  = (gpio_num_t)DIN;
     gpio_cfg.mclk = (gpio_num_t)MCLK;
-    gpio_cfg.ws = (gpio_num_t)LRC;
-    I2Sstop();
-    result = i2s_channel_reconfig_std_gpio(m_i2s_tx_handle, &gpio_cfg);
-    I2Sstart();
 
-    return (result == ESP_OK);
+    // 3. Reconfig เฉพาะ GPIO (ลดความซับซ้อนเพื่อป้องกันการ Crash)
+    esp_err_t err = ESP_OK;
+    err |= i2s_channel_reconfig_std_gpio(m_i2s_tx_handle, &gpio_cfg);
+    err |= i2s_channel_reconfig_std_gpio(m_i2s_rx_handle, &gpio_cfg);
+
+    I2Sstart();
+    return (err == ESP_OK);
 }
+
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 uint32_t Audio::getFileSize() { // returns the size of webfile or local file
     if (!m_audiofile) {
@@ -5698,19 +5713,26 @@ bool Audio::fsRange(uint32_t range) {
     return true;
 }
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+
 bool Audio::setSampleRate(uint32_t sampRate) {
-    if (!sampRate) sampRate = 48000;
+     if (!sampRate) sampRate = 48000;
     if (sampRate < 8000) {
         AUDIO_LOG_WARN("Sample rate must not be smaller than 8kHz, found: %lu", sampRate);
         m_sampleRate = 8000;
-    }
+    } else {
     m_sampleRate = sampRate;
-    m_resampleRatio = (float)m_sampleRate / 48000.0f;
-
+    }
     m_i2s_std_cfg.clk_cfg.sample_rate_hz = m_sampleRate;
+
     i2s_channel_disable(m_i2s_tx_handle);
+    i2s_channel_disable(m_i2s_rx_handle);
+
+    // สำคัญมาก: ต้อง Reconfig ทั้งคู่เพื่อให้ BCLK/LRCK เปลี่ยนความถี่พร้อมกัน
     i2s_channel_reconfig_std_clock(m_i2s_tx_handle, &m_i2s_std_cfg.clk_cfg);
+    i2s_channel_reconfig_std_clock(m_i2s_rx_handle, &m_i2s_std_cfg.clk_cfg);
+
     i2s_channel_enable(m_i2s_tx_handle);
+    i2s_channel_enable(m_i2s_rx_handle);
     return true;
 }
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
@@ -5776,17 +5798,21 @@ void Audio::setI2SCommFMT_LSB(bool commFMT) {
     //        Japanese or called LSBJ (Least Significant Bit Justified) format
 
     m_f_commFMT = commFMT;
-
+i2s_channel_disable(m_i2s_rx_handle);
     i2s_channel_disable(m_i2s_tx_handle);
     if (commFMT) {
         info(*this, evt_info, "commFMT = LSBJ (Least Significant Bit Justified)");
         m_i2s_std_cfg.slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO);
+
     } else {
         info(*this, evt_info, "commFMT = Philips");
+
         m_i2s_std_cfg.slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO);
     }
     i2s_channel_reconfig_std_slot(m_i2s_tx_handle, &m_i2s_std_cfg.slot_cfg);
+      i2s_channel_reconfig_std_slot(m_i2s_rx_handle, &m_i2s_std_cfg.slot_cfg);
     i2s_channel_enable(m_i2s_tx_handle);
+      i2s_channel_enable(m_i2s_rx_handle);
 }
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 void Audio::computeVUlevel(int16_t sample[2]) {

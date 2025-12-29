@@ -4,7 +4,7 @@
  * Opts: --bpp 2 --size 16 --font /Users/ratthaninwartcheeranon/Library/CloudStorage/Dropbox/MyProject/TuneBar/squareline/assets/font/NotoSansThai-Regular.ttf -o /Users/ratthaninwartcheeranon/Library/CloudStorage/Dropbox/MyProject/TuneBar/squareline/assets/font/ui_font_NotoSanThai20.c --format lvgl -r 0x20-0x7f --symbols กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮะาำิีึืุูเแโใไ่้๊๋็ัฯ์?๑๒๓๔๕๖๗๘๙ๅ๐ๆ --no-compress --no-prefilter
  ******************************************************************************/
 
-#include "ui.h"
+#include "../ui.h"
 
 #ifndef UI_FONT_NOTOSANTHAI20
 #define UI_FONT_NOTOSANTHAI20 1

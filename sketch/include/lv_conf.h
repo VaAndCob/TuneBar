@@ -538,7 +538,7 @@
 
 #define LV_USE_CHART      0
 
-#define LV_USE_COLORWHEEL 0
+#define LV_USE_COLORWHEEL 1
 
 #define LV_USE_IMGBTN     0
 

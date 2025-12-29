@@ -47,13 +47,13 @@ void i2c_master_Init(void)
     .scl_speed_hz = 1000000,
   };
 
-  dev_cfg.device_address = WAVESHARE_349_ES7210_ADDR;  // ES7210 addr
+  dev_cfg.device_address = WAVESHARE_349_ADC_ADDR;  // ES7210 addr
  ESP_ERROR_CHECK(i2c_master_bus_add_device(user_i2c_port0_handle, &dev_cfg, &es7210_dev_handle));
 
-  dev_cfg.device_address = WAVESHARE_349_TCA9554_ADDR;  // TCA9554 addr
+  dev_cfg.device_address = WAVESHARE_349_EXPANDER_ADDR;  // TCA9554 addr
  ESP_ERROR_CHECK(i2c_master_bus_add_device(user_i2c_port0_handle, &dev_cfg, &tca9554_dev_handle));
 
-  dev_cfg.device_address = WAVESHARE_349_ES8311_ADDR;
+  dev_cfg.device_address = WAVESHARE_349_CODEC_ADDR;
   ESP_ERROR_CHECK(i2c_master_bus_add_device(user_i2c_port0_handle, &dev_cfg, &es8311_dev_handle));
 
   dev_cfg.device_address = WAVESHARE_349_RTC_ADDR;

@@ -16,6 +16,7 @@ void livestreamMode(lv_event_t * e);
 void musicPlayerMode(lv_event_t * e);
 void chatBotMode(lv_event_t * e);
 void informationMode(lv_event_t * e);
+void utilityMode(lv_event_t * e);
 void saveWiFiCredential(lv_event_t * e);
 void scanNetwork(lv_event_t * e);
 void setBrightness(lv_event_t * e);
@@ -32,6 +33,11 @@ void readKeyboard(lv_event_t * e);
 void readNumpad(lv_event_t * e);
 void turnonScreen(lv_event_t * e);
 void unlockScreen(lv_event_t * e);
+void stopWeatherAnimation(lv_event_t * e);
+void changeInfoPanelNext(lv_event_t * e);
+void changeInfoPanelPrev(lv_event_t * e);
+void showArrow(lv_event_t * e);
+void updateAQIwidget(lv_event_t * e);
 void volumeup(lv_event_t * e);
 void volumemute(lv_event_t * e);
 void volumedown(lv_event_t * e);
@@ -43,11 +49,8 @@ void fastReverse5(lv_event_t * e);
 void playpause(lv_event_t * e);
 void fastForward5(lv_event_t * e);
 void nexttrack(lv_event_t * e);
-void stopWeatherAnimation(lv_event_t * e);
-void changeInfoPanelNext(lv_event_t * e);
-void changeInfoPanelPrev(lv_event_t * e);
-void showArrow(lv_event_t * e);
-void updateAQIwidget(lv_event_t * e);
+void torch_ON(lv_event_t * e);
+void torch_OFF(lv_event_t * e);
 
 #ifdef __cplusplus
 } /*extern "C"*/

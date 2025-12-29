@@ -1,4 +1,4 @@
-// Handle message que between task
+// Handle message que between task AUDIO and UI
 
 /*
       UIStatusPayload msg = { //prepare mesasge
@@ -6,7 +6,6 @@
                               .battery_state = bat_state
       };
       xQueueSend(ui_status_queue, &msg, 0);  //send message
-
 */
 #include "task_msg.h"
 #include "esp32-hal.h"
@@ -249,12 +248,14 @@ void process_ui_status_queue() {
       lv_obj_clear_flag(ui_Player_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // unhide blind panel
       lv_obj_clear_flag(ui_MainMenu_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // unhide blind panel
       lv_obj_clear_flag(ui_Info_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // unhide blind panel
+       lv_obj_clear_flag(ui_Utility_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // unhide blind panel
       break;
 
     case STATUS_SCREEN_UNLOCK:
       lv_obj_add_flag(ui_Player_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // hide blind panel
       lv_obj_add_flag(ui_MainMenu_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN);
       lv_obj_add_flag(ui_Info_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // hide blind panel
+      lv_obj_add_flag(ui_Utility_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // unhide blind panel
       break;
 
     case STATUS_WIFI_CONNECTION:

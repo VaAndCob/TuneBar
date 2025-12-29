@@ -86,12 +86,6 @@ void initLittleFS() {
   } else {
     log_d("LittleFS mounted successfully.");
 
-    //show littlefs free space
-    uint32_t total = LittleFS.totalBytes();
-    uint32_t used = LittleFS.usedBytes();
-    float percentage = (total > 0) ? ((float)used / total) * 100.0 : 0.0;
-    log_i("LittleFS:%5.1f%% (used %u bytes from %u bytes)\n",percentage, used, total);
-
     lv_fs_drv_t drv;
     lv_fs_drv_init(&drv);
     drv.letter = 'L';

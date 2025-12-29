@@ -138,7 +138,8 @@ class Audio {
     void             setConnectionTimeout(uint16_t timeout_ms, uint16_t timeout_ms_ssl);
     bool             setAudioPlayTime(uint16_t sec);
     bool             setTimeOffset(int sec);
-    bool             setPinout(uint8_t BCLK, uint8_t LRC, uint8_t DOUT, int8_t MCLK = I2S_GPIO_UNUSED, int8_t DIN = I2S_GPIO_UNUSED);
+    //bool             setPinout(uint8_t BCLK, uint8_t LRC, uint8_t DOUT, int8_t MCLK = I2S_GPIO_UNUSED, int8_t DIN = I2S_GPIO_UNUSED);
+    bool             setPinout(uint8_t BCLK, uint8_t LRC, uint8_t DOUT, int8_t MCLK = -1, int8_t DIN = -1);
     bool             pauseResume();
     bool             isRunning() { return m_f_running; }
     void             loop();
@@ -170,10 +171,14 @@ class Audio {
     const char*      getCodecname() { return codecname[m_codec]; }
     const char*      getVersion() { return audioI2SVers; }
 
+     i2s_chan_handle_t        getRxHandle() { return m_i2s_rx_handle; }
+     i2s_chan_handle_t        getTxHandle() { return m_i2s_tx_handle; }
+
     // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
   private:
     // ------- PRIVATE MEMBERS ----------------------------------------
+    
     std::unique_ptr<Decoder> createDecoder(const std::string& type);
     void                     destroy_decoder();
     bool                     fsRange(uint32_t range);
@@ -344,6 +349,7 @@ class Audio {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
+    i2s_chan_handle_t m_i2s_rx_handle = {};
     i2s_chan_handle_t m_i2s_tx_handle = {};
     i2s_chan_config_t m_i2s_chan_cfg = {}; // stores I2S channel values
     i2s_std_config_t  m_i2s_std_cfg = {};  // stores I2S driver values

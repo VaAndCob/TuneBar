@@ -5,14 +5,14 @@
 
 #include "../ui.h"
 
-lv_obj_t *ui_Screen_Info = NULL;lv_obj_t *ui_Info_Panel_Clock = NULL;lv_obj_t *ui_Info_Image_hour0 = NULL;lv_obj_t *ui_Info_Image_hour1 = NULL;lv_obj_t *ui_Info_Image_colon0 = NULL;lv_obj_t *ui_Info_Image_minute0 = NULL;lv_obj_t *ui_Info_Image_minute1 = NULL;lv_obj_t *ui_Info_Image_colon1 = NULL;lv_obj_t *ui_Info_Image_second0 = NULL;lv_obj_t *ui_Info_Image_second1 = NULL;lv_obj_t *ui_Info_Label_DateNixie = NULL;lv_obj_t *ui_Info_Panel_Weather = NULL;lv_obj_t *ui_Info_Image_Home = NULL;lv_obj_t *ui_Info_Image_Turbine = NULL;lv_obj_t *ui_Info_Image_Propeller = NULL;lv_obj_t *ui_Info_Image_WeatherIcon = NULL;lv_obj_t *ui_Info_Image_cat = NULL;lv_obj_t *ui_Info_Image_dog = NULL;lv_obj_t *ui_Info_Container_WeatherDetail = NULL;lv_obj_t *ui_Info_Label_Detail = NULL;lv_obj_t *ui_Info_Label_Temp = NULL;lv_obj_t *ui_Info_Label_LastUpdated = NULL;lv_obj_t *ui_Info_Label_DateTime = NULL;lv_obj_t *ui_Info_Label_Label23 = NULL;lv_obj_t *ui_Info_Panel_AQI = NULL;lv_obj_t *ui_Info_Label_AQIvalue = NULL;lv_obj_t *ui_Info_Label_Label24 = NULL;lv_obj_t *ui_Info_Label_AQIdominant = NULL;lv_obj_t *ui_Info_Label_AQIrate = NULL;lv_obj_t *ui_Info_Label_AQIlocation = NULL;lv_obj_t *ui_Info_Image_AQIimage = NULL;lv_obj_t *ui_Info_Button_returnMenu2 = NULL;lv_obj_t *ui_Info_Label_Label21 = NULL;lv_obj_t *ui_Info_Button_infoPanelLeft = NULL;lv_obj_t *ui_Info_Label_Label19 = NULL;lv_obj_t *ui_Info_Button_infoPanelRight = NULL;lv_obj_t *ui_Info_Label_Label22 = NULL;lv_obj_t *ui_Info_Panel_blindPanel = NULL;
+lv_obj_t *ui_Screen_Info = NULL;lv_obj_t *ui_Info_Panel_Clock = NULL;lv_obj_t *ui_Info_Image_hour0 = NULL;lv_obj_t *ui_Info_Image_hour1 = NULL;lv_obj_t *ui_Info_Image_colon0 = NULL;lv_obj_t *ui_Info_Image_minute0 = NULL;lv_obj_t *ui_Info_Image_minute1 = NULL;lv_obj_t *ui_Info_Image_colon1 = NULL;lv_obj_t *ui_Info_Image_second0 = NULL;lv_obj_t *ui_Info_Image_second1 = NULL;lv_obj_t *ui_Info_Label_DateNixie = NULL;lv_obj_t *ui_Info_Panel_Weather = NULL;lv_obj_t *ui_Info_Image_Home = NULL;lv_obj_t *ui_Info_Image_Turbine = NULL;lv_obj_t *ui_Info_Image_Propeller = NULL;lv_obj_t *ui_Info_Image_WeatherIcon = NULL;lv_obj_t *ui_Info_Image_cat = NULL;lv_obj_t *ui_Info_Image_dog = NULL;lv_obj_t *ui_Info_Container_WeatherDetail = NULL;lv_obj_t *ui_Info_Label_Detail = NULL;lv_obj_t *ui_Info_Label_Temp = NULL;lv_obj_t *ui_Info_Label_LastUpdated = NULL;lv_obj_t *ui_Info_Label_DateTime = NULL;lv_obj_t *ui_Info_Label_Label23 = NULL;lv_obj_t *ui_Info_Panel_AQI = NULL;lv_obj_t *ui_Info_Label_AQIvalue = NULL;lv_obj_t *ui_Info_Label_Label24 = NULL;lv_obj_t *ui_Info_Label_AQIdominant = NULL;lv_obj_t *ui_Info_Label_AQIrate = NULL;lv_obj_t *ui_Info_Label_AQIlocation = NULL;lv_obj_t *ui_Info_Image_AQIimage = NULL;lv_obj_t *ui_Info_Button_returnMenu = NULL;lv_obj_t *ui_Info_Label_Label21 = NULL;lv_obj_t *ui_Info_Button_infoPanelLeft = NULL;lv_obj_t *ui_Info_Label_Label19 = NULL;lv_obj_t *ui_Info_Button_infoPanelRight = NULL;lv_obj_t *ui_Info_Label_Label22 = NULL;lv_obj_t *ui_Info_Panel_blindPanel = NULL;
 // event funtions
 void ui_event_Screen_Info( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
 if ( event_code == LV_EVENT_GESTURE &&  lv_indev_get_gesture_dir(lv_indev_get_act()) == LV_DIR_TOP  ) {
 lv_indev_wait_release(lv_indev_get_act());
-      _ui_screen_change( &ui_Screen_MainMenu, LV_SCR_LOAD_ANIM_OVER_TOP, 500, 0, &ui_Screen_MainMenu_screen_init);
+      _ui_screen_change( &ui_Screen_MainMenu, LV_SCR_LOAD_ANIM_MOVE_TOP, 500, 0, &ui_Screen_MainMenu_screen_init);
       stopWeatherAnimation( e );
 }
 if ( event_code == LV_EVENT_GESTURE &&  lv_indev_get_gesture_dir(lv_indev_get_act()) == LV_DIR_LEFT  ) {
@@ -73,11 +73,11 @@ if ( event_code == LV_EVENT_CLICKED) {
 }
 }
 
-void ui_event_Info_Button_returnMenu2( lv_event_t * e) {
+void ui_event_Info_Button_returnMenu( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
 if ( event_code == LV_EVENT_CLICKED) {
-      _ui_screen_change( &ui_Screen_MainMenu, LV_SCR_LOAD_ANIM_OVER_TOP, 500, 0, &ui_Screen_MainMenu_screen_init);
+      _ui_screen_change( &ui_Screen_MainMenu, LV_SCR_LOAD_ANIM_MOVE_TOP, 500, 0, &ui_Screen_MainMenu_screen_init);
       stopWeatherAnimation( e );
 }
 }
@@ -466,19 +466,19 @@ lv_obj_set_align( ui_Info_Image_AQIimage, LV_ALIGN_LEFT_MID );
 lv_obj_add_flag( ui_Info_Image_AQIimage, LV_OBJ_FLAG_ADV_HITTEST );   /// Flags
 lv_obj_clear_flag( ui_Info_Image_AQIimage, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 
-ui_Info_Button_returnMenu2 = lv_btn_create(ui_Screen_Info);
-lv_obj_set_width( ui_Info_Button_returnMenu2, 100);
-lv_obj_set_height( ui_Info_Button_returnMenu2, 40);
-lv_obj_set_align( ui_Info_Button_returnMenu2, LV_ALIGN_BOTTOM_MID );
-lv_obj_add_flag( ui_Info_Button_returnMenu2, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_SCROLL_ON_FOCUS );   /// Flags
-lv_obj_clear_flag( ui_Info_Button_returnMenu2, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
-lv_obj_set_style_radius(ui_Info_Button_returnMenu2, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_bg_color(ui_Info_Button_returnMenu2, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
-lv_obj_set_style_bg_opa(ui_Info_Button_returnMenu2, 120, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_shadow_color(ui_Info_Button_returnMenu2, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
-lv_obj_set_style_shadow_opa(ui_Info_Button_returnMenu2, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+ui_Info_Button_returnMenu = lv_btn_create(ui_Screen_Info);
+lv_obj_set_width( ui_Info_Button_returnMenu, 100);
+lv_obj_set_height( ui_Info_Button_returnMenu, 40);
+lv_obj_set_align( ui_Info_Button_returnMenu, LV_ALIGN_BOTTOM_MID );
+lv_obj_add_flag( ui_Info_Button_returnMenu, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_SCROLL_ON_FOCUS );   /// Flags
+lv_obj_clear_flag( ui_Info_Button_returnMenu, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
+lv_obj_set_style_radius(ui_Info_Button_returnMenu, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_bg_color(ui_Info_Button_returnMenu, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_bg_opa(ui_Info_Button_returnMenu, 120, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_shadow_color(ui_Info_Button_returnMenu, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_shadow_opa(ui_Info_Button_returnMenu, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 
-ui_Info_Label_Label21 = lv_label_create(ui_Info_Button_returnMenu2);
+ui_Info_Label_Label21 = lv_label_create(ui_Info_Button_returnMenu);
 lv_obj_set_width( ui_Info_Label_Label21, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_Info_Label_Label21, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_align( ui_Info_Label_Label21, LV_ALIGN_CENTER );
@@ -548,7 +548,7 @@ lv_obj_add_event_cb(ui_Info_Label_LastUpdated, ui_event_Info_Label_LastUpdated, 
 lv_obj_add_event_cb(ui_Info_Label_DateTime, ui_event_Info_Label_DateTime, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_Info_Panel_AQI, ui_event_Info_Panel_AQI, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_Info_Panel_Weather, ui_event_Info_Panel_Weather, LV_EVENT_ALL, NULL);
-lv_obj_add_event_cb(ui_Info_Button_returnMenu2, ui_event_Info_Button_returnMenu2, LV_EVENT_ALL, NULL);
+lv_obj_add_event_cb(ui_Info_Button_returnMenu, ui_event_Info_Button_returnMenu, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_Info_Button_infoPanelLeft, ui_event_Info_Button_infoPanelLeft, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_Info_Button_infoPanelRight, ui_event_Info_Button_infoPanelRight, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_Info_Panel_blindPanel, ui_event_Info_Panel_blindPanel, LV_EVENT_ALL, NULL);
@@ -592,7 +592,7 @@ ui_Info_Label_AQIdominant= NULL;
 ui_Info_Label_AQIrate= NULL;
 ui_Info_Label_AQIlocation= NULL;
 ui_Info_Image_AQIimage= NULL;
-ui_Info_Button_returnMenu2= NULL;
+ui_Info_Button_returnMenu= NULL;
 ui_Info_Label_Label21= NULL;
 ui_Info_Button_infoPanelLeft= NULL;
 ui_Info_Label_Label19= NULL;

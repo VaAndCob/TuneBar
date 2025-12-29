@@ -143,8 +143,9 @@ lv_theme_t *theme = lv_theme_default_init(dispp, lv_palette_main(LV_PALETTE_BLUE
 lv_disp_set_theme(dispp, theme);
 ui_Screen_Boot_screen_init();
 ui_Screen_MainMenu_screen_init();
-ui_Screen_Player_screen_init();
 ui_Screen_Info_screen_init();
+ui_Screen_Player_screen_init();
+ui_Screen_Utility_screen_init();
 ui_Startevents____initial_actions0 = lv_obj_create(NULL);
 lv_disp_load_scr( ui_Screen_Boot);
 }
@@ -152,6 +153,7 @@ lv_disp_load_scr( ui_Screen_Boot);
 void ui_destroy( void )
 {ui_Screen_Boot_screen_destroy();
 ui_Screen_MainMenu_screen_destroy();
-ui_Screen_Player_screen_destroy();
 ui_Screen_Info_screen_destroy();
+ui_Screen_Player_screen_destroy();
+ui_Screen_Utility_screen_destroy();
 }

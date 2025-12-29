@@ -18,25 +18,23 @@ xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 
 */
 #include "file/file.h"
 #include "task_msg/task_msg.h"
+#include <LittleFS.h>
 
 //==============================================
 // Memory Check Function
 void memory_info() {
-  log_d("\n--- Memory Status ---");
   size_t freeHeap = ESP.getFreeHeap();
   size_t totalHeap = ESP.getHeapSize();
-  log_d("Heap: %u / %u bytes free (%.2f%%)\n", freeHeap, totalHeap, (freeHeap * 100.0 / totalHeap));
-  log_d("Min Free Heap: %u bytes\n", ESP.getMinFreeHeap());
-  log_d("Max Alloc Block: %u bytes\n", ESP.getMaxAllocHeap());
+  log_i("Heap: %u / %u bytes free (%.1f%%)", freeHeap, totalHeap, (freeHeap * 100.0 / totalHeap));
+  log_i("Min Free Heap: %u bytes", ESP.getMinFreeHeap());
+  log_i("Max Alloc Block: %u bytes", ESP.getMaxAllocHeap());
   if (psramFound()) {
     size_t freePSRAM = ESP.getFreePsram();
     size_t totalPSRAM = ESP.getPsramSize();
-    log_d("PSRAM: %u / %u bytes free\n", freePSRAM, totalPSRAM);
+    log_i("PSRAM: %u / %u bytes free (%.1f%%)", freePSRAM, totalPSRAM, (freePSRAM * 100.0 / totalPSRAM));
   } else {
-    log_d("PSRAM: Not found");
+    log_i("PSRAM: Not found");
   }
-  UBaseType_t stackLeft = uxTaskGetStackHighWaterMark(NULL);
-  log_d("Current Task Stack Left: %u words (%u bytes)\n", stackLeft, stackLeft * 4);
 }
 
 //==============================================
@@ -44,7 +42,7 @@ void memory_info() {
 void button_input_task(void *param) {
   //   UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
   // log_d("{ Task stack remaining MIN: %u bytes }", hwm);
-  vTaskDelay(pdMS_TO_TICKS(3000));//delay 1 sec avoid hold button too long and turn to off again
+  vTaskDelay(pdMS_TO_TICKS(3000)); // delay 1 sec avoid hold button too long and turn to off again
   bool powerBTN_pressed = false;
   long hold_timer = 0;
   AudioCommandPayload msg = {};
@@ -57,7 +55,7 @@ void button_input_task(void *param) {
       } else if (millis() - hold_timer > 500) {
         hold_timer = millis();
         audioSetVolume(20);
-        audioPlayFS(1, "/audio/off.mp3"); 
+        audioPlayFS(1, "/audio/off.mp3");
         log_d("< POWER OFF >");
         vTaskDelay(pdMS_TO_TICKS(1000));
         io->digitalWrite(EXIO6_BIT, 0); // turn off
@@ -191,7 +189,159 @@ void timeStr(char *buffer, size_t size, uint32_t second) {
   }
 }
 
-//==============================================
+// AUDIO TASK  ========================================================================
+// ---------- GLOBAL RECORDING STATE ----------
+static const size_t SAMPLE_RATE = 48000; // or 16000 – choose ONE
+static const size_t RECORD_SECONDS = 5;
+static const size_t CHANNELS = 2; // 1: mono capture 2;//stereo
+static const size_t BYTES_PER_SAMPLE = 2; // 16-bit PCM
+
+static const size_t MAX_REC_SIZE = SAMPLE_RATE * CHANNELS * BYTES_PER_SAMPLE * RECORD_SECONDS;
+
+static int16_t *speech_buffer = nullptr;// persistent buffer
+static size_t speech_ptr = 0;// write cursor (bytes)
+static bool speech_ready = false;// flag says buffer is valid
+//------------------------------------
+void init_audio_buffers() {
+  if (!speech_buffer) {
+    speech_buffer = (int16_t *)heap_caps_malloc(MAX_REC_SIZE, MALLOC_CAP_SPIRAM);
+  }
+  speech_ptr = 0;
+  speech_ready = false;
+}
+//------------------------------------
+void playRecordedAudio() {
+
+  // ---------- SAFETY CHECKS ----------
+  if (!speech_buffer) {
+    log_e("speech_buffer NULL");
+    return;
+  }
+
+  if (speech_ptr == 0) {
+    log_w("No recorded audio available");
+    return;
+  }
+
+auto tx = audio.getTxHandle();
+  if (!tx) {
+    log_e("TX handle NULL");
+    return;
+  }
+
+  // ---------- PLAYBACK ----------
+  size_t length = speech_ptr;         // bytes of valid mono audio
+  size_t play_ptr = 0;
+  size_t bytes_written = 0;
+
+  const int NUM_SAMPLES = 256;        // mono samples / block
+  static int16_t stereo_buf[NUM_SAMPLES * 2];   // stereo L/R interleaved
+
+  log_i("Playback start (%u bytes, stereo 16-bit)", (unsigned)length);
+
+  while (play_ptr < length) {
+
+    size_t samples_left = (length - play_ptr) / 2;   // bytes→samples
+    size_t samples_to_send = samples_left;
+
+    if (samples_to_send > NUM_SAMPLES)
+      samples_to_send = NUM_SAMPLES;
+
+    int16_t *mono_ptr =
+        (int16_t *)((uint8_t *)speech_buffer + play_ptr);
+
+    // mono → stereo copy
+    for (size_t i = 0; i < samples_to_send; i++) {
+      int16_t s = mono_ptr[i];
+      stereo_buf[2*i + 0] = s;   // L
+      stereo_buf[2*i + 1] = s;   // R
+    }
+
+    esp_err_t err = i2s_channel_write(
+        tx,
+        stereo_buf,
+        samples_to_send * 4,      // 4 bytes per stereo frame
+        &bytes_written,
+        portMAX_DELAY);
+
+    if (err != ESP_OK) {
+      log_e("I2S write failed: %s", esp_err_to_name(err));
+      break;
+    }
+
+    play_ptr += samples_to_send * 2;  // mono bytes advanced
+  }
+
+  log_i("Playback finished (%u bytes played)", (unsigned)length);
+
+//---------------------------------
+
+  log_i("=== PLAYBACK TEST: synthetic noise ===");
+  for (int block = 0; block < 400; block++) {  // ~2 seconds at 48k
+    // generate noise
+    for (int i = 0; i < NUM_SAMPLES; i++) {
+      int16_t v = (rand() % 4000) - 1000;
+      stereo_buf[i*2 + 0] = v;   // L
+      stereo_buf[i*2 + 1] = v;   // R
+    }
+    size_t written = 0;
+    esp_err_t err = i2s_channel_write(
+        tx,
+        stereo_buf,
+        NUM_SAMPLES * 4,        // stereo, 2 bytes each → 4 bytes/frame
+        &written,
+        portMAX_DELAY);
+
+    if (err != ESP_OK) {
+      log_e("I2S write failed: %s", esp_err_to_name(err));
+      break;
+    }
+  }
+  log_i("=== TEST PLAYBACK DONE ===");
+
+  // optional reset for next recording session
+  speech_ready = false;
+  speech_ptr = 0;
+}
+
+
+/*
+void startRecording() {
+    if (audio.isRunning()) {
+        audio.stopSong(); // หยุดเล่นเพลงก่อน
+    }
+    // ตั้งค่า I2S ให้ทำงานที่ 16kHz สำหรับ Mic Input
+    // การเรียก setPinout อีกครั้งจะช่วย Reconfig I2S Clock ให้เป็น 16kHz
+
+    // ปลุกชิป ES7210
+   if (!mic.start()) {
+      log_e("ES7210 not detected");
+      return;
+    }
+
+    length = 0;
+    is_mic_mode = true;
+    log_i("Recording Started at 16kHz");
+}
+*/
+
+// stereo 48k -> mono 16k (simple decimation, no filter)
+void downsample48kTo16k(int16_t *in48k, size_t frames48k, int16_t *out16k, size_t &frames16k) {
+  frames16k = 0;
+  for (size_t i = 0; i < frames48k; i += 3) {
+    int16_t left = in48k[i * 2 + 0]; // take LEFT
+    out16k[frames16k++] = left;
+  }
+}
+//------------------------------------
+void stopRecording(size_t length) {
+
+  mic.stop();
+  is_mic_mode = false;
+  log_i("Recording Stopped length = %d bytes", length);
+
+  playRecordedAudio();
+}
 
 // audio information callback
 void my_audio_info(Audio::msg_t m) {
@@ -230,8 +380,7 @@ void my_audio_info(Audio::msg_t m) {
   } // switch
 }
 
-// audio task that fill the buffer
-
+//------------------------------------
 void audio_loop_task(void *param) {
   const TickType_t period = pdMS_TO_TICKS(5);
   TickType_t lastWakeTime = xTaskGetTickCount();
@@ -244,162 +393,185 @@ void audio_loop_task(void *param) {
   char status_buffer[50];
   UIStatusPayload msg = {};
 
+  // --- ส่วนของ Mic (แก้ไขใหม่) ---
+  // อ่านทีละ 512 bytes (จะได้ 128 stereo frames)
+  const size_t stereo_chunk_bytes = 512;
+  int16_t stereo_temp[stereo_chunk_bytes / 2]; // Buffer ชั่วคราวรับ Stereo
+  size_t bytes_read = 0;
+
+
+  UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
+  log_w("{ Task stack remaining MIN: %u bytes }", hwm);
+
   for (;;) {
-    audio.loop();
-    process_audio_cmd_que();//handle audio command from other tasks
-    vTaskDelayUntil(&lastWakeTime, period);//yield for 5 ms
 
-    if (audio.isRunning()) {
-      current_pos = audio.getAudioCurrentTime();
-      current_total = audio.getAudioFileDuration(); // get max length.
+    // PLAYBACK MODE
+    if (!is_mic_mode) {
+      audio.loop();
+      process_audio_cmd_que();
+      vTaskDelayUntil(&lastWakeTime, period);
 
-      // Update progress bar /elapse/remain
-      if (current_pos != last_pos && current_total > 0) { // new position found
-        log_d("%u/%u", current_pos, current_total);
-        timeStr(elapse_buf, sizeof(elapse_buf), current_pos);
-        timeStr(remain_buf, sizeof(remain_buf), current_total - current_pos);
-        if (!seeking_now) {
-        msg = {// prepare mesasge
-               .type = STATUS_UPDATE_PLAY_POSITION,
-               .current_pos = current_pos,
-               .total = current_total};
-        strncpy(msg.elapse_buf, elapse_buf, sizeof(msg.elapse_buf) - 1);
-        msg.elapse_buf[sizeof(msg.elapse_buf) - 1] = '\0';
-        strncpy(msg.remain_buf, remain_buf, sizeof(msg.remain_buf) - 1);
-        msg.remain_buf[sizeof(msg.remain_buf) - 1] = '\0';
-        xQueueSend(ui_status_queue, &msg, 100); // send message
-        }
-        // track not 0 length
-        if (current_total > 0) {
-          // set progress bar status when opena new track (not equal track length)
-          if (current_total != last_total) {
+      // ... (โค้ด Update UI เดิมของคุณ เก็บไว้เหมือนเดิม) ...
+      if (audio.isRunning()) {
+
+        current_pos = audio.getAudioCurrentTime();
+        current_total = audio.getAudioFileDuration();
+        if (current_pos != last_pos && current_total > 0) {
+          log_d("%u/%u", current_pos, current_total);
+          timeStr(elapse_buf, sizeof(elapse_buf), current_pos);
+          timeStr(remain_buf, sizeof(remain_buf), current_total - current_pos);
+          if (!seeking_now) {
             msg = {// prepare mesasge
-                   .type = STATUS_UPDATE_PROGRESS_BAR,
+                   .type = STATUS_UPDATE_PLAY_POSITION,
+                   .current_pos = current_pos,
                    .total = current_total};
+            strncpy(msg.elapse_buf, elapse_buf, sizeof(msg.elapse_buf) - 1);
+            msg.elapse_buf[sizeof(msg.elapse_buf) - 1] = '\0';
+            strncpy(msg.remain_buf, remain_buf, sizeof(msg.remain_buf) - 1);
+            msg.remain_buf[sizeof(msg.remain_buf) - 1] = '\0';
             xQueueSend(ui_status_queue, &msg, 100); // send message
           }
-
-          //---------
-          // detect end of file track -> next track
-          if ((mediaType == 1) && (current_total - current_pos <= 1)) {
-            switch (playMode) {
-            case 0: { // normal play mode
-              trackIndex++;
-              if (trackIndex == trackListLength) trackIndex = 0;
-              break;
+          // track not 0 length
+          if (current_total > 0) {
+            // set progress bar status when opena new track (not equal track length)
+            if (current_total != last_total) {
+              msg = {// prepare mesasge
+                     .type = STATUS_UPDATE_PROGRESS_BAR,
+                     .total = current_total};
+              xQueueSend(ui_status_queue, &msg, 100); // send message
             }
-            case 1: { // random play, avoid same track twice
-              uint16_t old = trackIndex;
-              do {
-                trackIndex = random(trackListLength);
-              } while (trackListLength > 1 && trackIndex == old);
-              break;
-            }
-            case 2: { // repeat
-              // do nothing
-              break;
-            }
-            }
-            // switch
-            //  update track index
-            snprintf(status_buffer, sizeof(status_buffer), "%d of %d", trackIndex + 1, trackListLength);
-            msg = {
-                .type = STATUS_UPDATE_TRACK_NUMBER,
-            };
-            strncpy(msg.trackNumber, status_buffer, sizeof(msg.trackNumber) - 1);
-            msg.trackNumber[sizeof(msg.trackNumber) - 1] = '\0';
-            xQueueSend(ui_status_queue, &msg, 100); // send message
 
-            // play track
-            String trackpath = getTrackPath(trackIndex);
-            msg = {
-                .type = STATUS_UPDATE_TRACK_DESC_SET,
-            };
-            if (!audio.connecttoFS(SD, trackpath.c_str())) {
-              log_e("Failed to open file: %s", trackpath);
-              strncpy(msg.trackDesc, "Cannot access music.\nPlease check the SD Card.\nOr Update music library.", sizeof(msg.trackDesc) - 1);
-            } else {
-              strncpy(msg.trackDesc, "", sizeof(msg.trackDesc) - 1);
-            }
-            msg.trackDesc[sizeof(msg.trackDesc) - 1] = '\0';
-            xQueueSend(ui_status_queue, &msg, 100); // send message
-          } // detect end of track -> next track
-        } // not empty track
+            //---------
+            // detect end of file track -> next track
+            if ((mediaType == 1) && (current_total - current_pos <= 1)) {
+              switch (playMode) {
+              case 0: { // normal play mode
+                trackIndex++;
+                if (trackIndex == trackListLength) trackIndex = 0;
+                break;
+              }
+              case 1: { // random play, avoid same track twice
+                uint16_t old = trackIndex;
+                do {
+                  trackIndex = random(trackListLength);
+                } while (trackListLength > 1 && trackIndex == old);
+                break;
+              }
+              case 2: { // repeat
+                // do nothing
+                break;
+              }
+              }
+              // switch
+              //  update track index
+              snprintf(status_buffer, sizeof(status_buffer), "%d of %d", trackIndex + 1, trackListLength);
+              msg = {
+                  .type = STATUS_UPDATE_TRACK_NUMBER,
+              };
+              strncpy(msg.trackNumber, status_buffer, sizeof(msg.trackNumber) - 1);
+              msg.trackNumber[sizeof(msg.trackNumber) - 1] = '\0';
+              xQueueSend(ui_status_queue, &msg, 100); // send message
 
-        last_pos = current_pos;
-        last_total = current_total;
-      } // current_pos != last_pos
-    } // audio is running
-    // UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
-    // log_d("{ Task stack remaining MIN: %u bytes }", hwm);
-  } // for {;;}
-}
-//--------------------------------------------------------------
+              // play track
+              String trackpath = getTrackPath(trackIndex);
+              msg = {
+                  .type = STATUS_UPDATE_TRACK_DESC_SET,
+              };
+              if (!audio.connecttoFS(SD, trackpath.c_str())) {
+                log_e("Failed to open file: %s", trackpath);
+                strncpy(msg.trackDesc, "Cannot access music.\nPlease check the SD Card.\nOr Update music library.", sizeof(msg.trackDesc) - 1);
+              } else {
+                strncpy(msg.trackDesc, "", sizeof(msg.trackDesc) - 1);
+              }
+              msg.trackDesc[sizeof(msg.trackDesc) - 1] = '\0';
+              xQueueSend(ui_status_queue, &msg, 100); // send message
+            } // detect end of track -> next track
+          } // not empty track
 
-
-void checkLittleFSSpace() {
-    // Initialize LittleFS
-    if (!LittleFS.begin()) {
-        log_e("An Error has occurred while mounting LittleFS");
-        return;
-    }
-    uint32_t total = LittleFS.totalBytes();
-    uint32_t used = LittleFS.usedBytes();
-    
-    float percentage = (total > 0) ? ((float)used / total) * 100.0 : 0.0;
-
-    const int barWidth = 10; // Number of characters inside the brackets
-    int filledWidth = (int)((percentage / 100.0) * barWidth);
-
-    String bar = "LittleFS: [";
-    for (int i = 0; i < barWidth; i++) {
-        if (i < filledWidth) {
-           bar += "=";
-        } else {
-           bar += " ";
+          last_pos = current_pos;
+          last_total = current_total;
         }
+      }
+      vTaskDelay(1);
     }
-    bar += ("] ");
-    Serial.printf("%5.1f%% (used %u bytes from %u bytes)\n", 
-                  percentage, used, total);
-}
 
+
+
+    // ---------RECORD MODE-------------------------
+    else {
+  auto rx_handle = audio.getRxHandle();
+  if (!rx_handle) {
+    log_e("I2S RX Handle NULL");
+    vTaskDelay(50);
+    continue;
+  }
+
+  // allocate once
+  if (!speech_buffer) {
+    init_audio_buffers();
+
+    if (!speech_buffer) {
+      log_e("speech_buffer alloc failed");
+      vTaskDelay(100);
+      continue;
+    }
+  }
+
+  const size_t stereo_chunk_bytes = 512;
+  int16_t stereo_temp[stereo_chunk_bytes / 2];
+  size_t bytes_read = 0;
+
+  esp_err_t err = i2s_channel_read(
+      rx_handle,
+      stereo_temp,
+      sizeof(stereo_temp),
+      &bytes_read,
+      pdMS_TO_TICKS(100));
+   
+     // stereo_temp contains interleaved L R L R ...
 /*
-//------------- Micro phone task -------------------------
-#include "driver/i2s_std.h"
-// จอง PSRAM สำหรับเก็บเสียง 15 วินาที (ประมาณ 480KB)
-const size_t MAX_REC_SIZE = 16000 * 2 * 5; 
-int16_t *speech_buffer = (int16_t *)heap_caps_malloc(MAX_REC_SIZE, MALLOC_CAP_SPIRAM);
-size_t speech_ptr = 0;
-
-
-i2s_chan_handle_t rx_handle = {};
-
-void mic_capture_task(void *pvParameters) {
-    const size_t chunk_size = 512;
-    int16_t temp[chunk_size];
-    size_t bytes_read = 0;
-    is_mic_mode = true;
-
-//    mic.init_i2s1_mic_16k();
-    for (;;) {
-        if (is_mic_mode && rx_handle != NULL) {
-            // ใช้ i2s_channel_read แทน i2s_read (นี่คือคำสั่งของ Driver ใหม่)
-            esp_err_t err = i2s_channel_read(rx_handle, temp, sizeof(temp), &bytes_read, pdMS_TO_TICKS(10));
-            
-            if (err == ESP_OK && bytes_read > 0) {
-                if (speech_ptr + (bytes_read/2) < (MAX_REC_SIZE / 2)) {
-                    memcpy(&speech_buffer[speech_ptr], temp, bytes_read);
-                    speech_ptr += (bytes_read / 2);
-                } else {
-                    is_mic_mode = false;
-                    log_d("Capture size: %u bytes",bytes_read);
-                }
-            }
-        } else {
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
-        vTaskDelay(pdMS_TO_TICKS(1));
-    }
+for (int i = 0; i < 16; i++) {   // print the first 16 samples
+    int16_t L = stereo_temp[i * 2 + 0];
+    int16_t R = stereo_temp[i * 2 + 1];
+    log_i("%d,%d\n", L, R);
 }
-*/
+ */
+  if (err == ESP_OK && bytes_read >= 4) {
+
+    size_t frames = bytes_read / 4;   // 4 bytes per stereo frame
+
+    // prevent overflow
+    if (speech_ptr + frames * 2 > MAX_REC_SIZE) {
+      log_w("Recording buffer full");
+      speech_ready = true;
+      stopRecording(speech_ptr);
+      continue;
+    }
+
+    // mono write pointer
+    int16_t *dest = speech_buffer + (speech_ptr / 2);
+
+    // copy Left only
+    for (size_t i = 0; i < frames; i++) {
+      dest[i] = stereo_temp[i * 2];
+    }
+
+    // advance in BYTES
+    speech_ptr += frames * 2;
+
+    if (speech_ptr >= MAX_REC_SIZE) {
+      speech_ready = true;
+      log_i("Buffer Full - stop");
+      stopRecording(speech_ptr);
+    }
+  }
+  else if (err != ESP_OK) {
+    log_e("I2S Read Error: %s", esp_err_to_name(err));
+  }
+
+  vTaskDelay(1);
+}
+
+//-------------------------------
+  } // for(;;)
+}// audio loop task

@@ -28,8 +28,9 @@ extern "C" {
 ///////////////////// SCREENS ////////////////////
 #include "screens/ui_Screen_Boot.h"
 #include "screens/ui_Screen_MainMenu.h"
-#include "screens/ui_Screen_Player.h"
 #include "screens/ui_Screen_Info.h"
+#include "screens/ui_Screen_Player.h"
+#include "screens/ui_Screen_Utility.h"
 
 ///////////////////// VARIABLES ////////////////////
 extern lv_anim_t * bounce_Animation( lv_obj_t *TargetObject, int delay);
@@ -47,12 +48,11 @@ LV_IMG_DECLARE( ui_img_images_livestreaming_png);   // assets/images/livestreami
 LV_IMG_DECLARE( ui_img_images_music_png);   // assets/images/music.png
 LV_IMG_DECLARE( ui_img_images_assistant_png);   // assets/images/assistant.png
 LV_IMG_DECLARE( ui_img_images_climate_png);   // assets/images/climate.png
+LV_IMG_DECLARE( ui_img_images_utility_png);   // assets/images/utility.png
 LV_IMG_DECLARE( ui_img_images_settings_png);   // assets/images/settings.png
 LV_IMG_DECLARE( ui_img_images_globe_png);   // assets/images/globe.png
 LV_IMG_DECLARE( ui_img_images_timezone_png);   // assets/images/timezone.png
-LV_IMG_DECLARE( ui_img_images_qr_png);   // assets/images/qr.png
 LV_IMG_DECLARE( ui_img_images_button_png);   // assets/images/button.png
-LV_IMG_DECLARE( ui_img_images_mute_png);   // assets/images/mute.png
 LV_IMG_DECLARE( ui_img_numbers_0_png);   // assets/numbers/0.png
 LV_IMG_DECLARE( ui_img_numbers_colon_png);   // assets/numbers/colon.png
 LV_IMG_DECLARE( ui_img_weather_home_sunny_png);   // assets/weather/home_sunny.png
@@ -60,6 +60,10 @@ LV_IMG_DECLARE( ui_img_weather_stack_png);   // assets/weather/stack.png
 LV_IMG_DECLARE( ui_img_weather_propeller_png);   // assets/weather/propeller.png
 LV_IMG_DECLARE( ui_img_custom_cat_right1_png);   // assets/custom/cat_right1.png
 LV_IMG_DECLARE( ui_img_custom_dog_left1_png);   // assets/custom/dog_left1.png
+LV_IMG_DECLARE( ui_img_images_mute_png);   // assets/images/mute.png
+LV_IMG_DECLARE( ui_img_images_torch_png);   // assets/images/torch.png
+LV_IMG_DECLARE( ui_img_images_systeminfo_png);   // assets/images/systeminfo.png
+LV_IMG_DECLARE( ui_img_images_qr_png);   // assets/images/qr.png
 LV_IMG_DECLARE( ui_img_aqi_good_png);   // assets/aqi/good.png
 LV_IMG_DECLARE( ui_img_aqi_hazardous_png);   // assets/aqi/hazardous.png
 LV_IMG_DECLARE( ui_img_aqi_moderate_png);   // assets/aqi/moderate.png

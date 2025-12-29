@@ -7,32 +7,7 @@ ES7210::ES7210() {}
 ES7210::~ES7210() {}
 
 
-//i2s_chan_handle_t rx_handle = {};
 
-esp_err_t ES7210::init_i2s1_mic_16k() {
-    i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_1, I2S_ROLE_MASTER); 
-    
-    esp_err_t err = i2s_new_channel(&chan_cfg, NULL, &rx_handle);
-    if (err != ESP_OK) return err;
-
-    i2s_std_config_t std_cfg = {
-        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(16000),
-        .slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
-        .gpio_cfg = {
-            .mclk = GPIO_NUM_7,
-            .bclk = GPIO_NUM_14, 
-            .ws   = GPIO_NUM_15, 
-            .dout = I2S_GPIO_UNUSED,
-            .din  = GPIO_NUM_16, 
-        },
-    };
-
-    err = i2s_channel_init_std_mode(rx_handle, &std_cfg);
-    if (err != ESP_OK) return err;
-
-    err = i2s_channel_enable(rx_handle);
-    return err;
-}
 
 esp_err_t ES7210::writeReg(uint8_t reg, uint8_t val) {
     if (!es7210_dev_handle) return ESP_FAIL;
@@ -60,36 +35,110 @@ bool ES7210::reset() {
     return true;
 }
 
-bool ES7210::begin() {
-    if (!reset()) return false;
+bool ES7210::init()
+{
 
-    // ใช้ชื่อตาม es7210_reg.h ที่คุณหนุ่มส่งมาล่าสุด
-    writeReg(ES7210_MODE_CONFIG_REG08, 0x02); 
-    writeReg(ES7210_SDP_INTERFACE1_REG11, 0x00); // 0x00 = I2S, 16-bit
-    
-    // ตั้งค่า Analog & Power (ใช้เลขตาม .h)
-    writeReg(ES7210_ANALOG_REG40, 0xC3); 
-    writeReg(ES7210_MIC12_BIAS_REG41, 0x70); 
-    
-    writeReg(ES7210_MIC1_POWER_REG47, 0x08);
-    writeReg(ES7210_MIC2_POWER_REG48, 0x08);
+      uint8_t id = 0;
 
-    setMicGain(0, 21.0f);
-    setMicGain(1, 21.0f);
+    // ----------- check device responds ----------
+    if (readReg(0x00, &id) != ESP_OK) {
+        log_e("ES7210 not responding on I2C");
+        return false;
+    }
+    writeReg( 0x00, 0xFF); // Reset
+    delay(10);
+    writeReg( 0x00, 0x41); 
     
-    stop(); 
+    // 1. Power Management - สำคัญมาก [4]
+    // ต้องเปิด Analog blocks (0x3F) ก่อนเพื่อให้ ADC และ Mic Bias พร้อมทำงาน
+    writeReg( 0x01, 0x3F); 
+    delay(10);
+    writeReg( 0x01, 0x00); // Exit shutdown
+    
+    // 2. Clock & Format
+    writeReg( 0x08, 0x00); // Slave Mode [5]
+    writeReg( 0x09, 0x30); // Analog Mic Mode
+    writeReg( 0x0B, 0x30); // I2S 16bit in 32bit frame [5]
+    
+    // 3. ADC & Mic Bias Setup
+    writeReg( 0x10, 0x03); // Enable ADC1+ADC2 [6]
+    writeReg( 0x11, 0x54); // L=ADC1, R=ADC1 [6]
+    
+    // เปิด Mic Bias (ต้องการ MCLK ที่เสถียร ณ จุดนี้) [6]
+    writeReg( 0x40, 0x4B); 
+    writeReg( 0x41, 0x78); 
+    
+    // 4. Analog Front-end
+    writeReg( 0x43, 0x1F); // Gain
+    writeReg( 0x44, 0x1F); // Gain
+    writeReg( 0x4B, 0x00); // Power on MIC1/2 [7]
+    writeReg( 0xFD, 0x00);
+
     return true;
 }
 
+
+
 bool ES7210::start() {
-    updateReg(ES7210_POWER_DOWN_REG06, 0x03, 0x00); // Power up ADC
-    writeReg(0x14, 0x00); // Unmute ADC1/2
+    uint8_t check;
+    if (readReg(0x00, &check) != ESP_OK) {
+        log_e("ES7210 I2C Error");
+        return false;
+    }
+
+    // 1. Reset
+    writeReg(0x00, 0xFF); 
+    writeReg(0x00, 0x32); 
+
+    // 2. Power Up (สำคัญ! ต้องสั่ง 0x06=0x00)
+    writeReg(0x06, 0x00); 
+
+    // 3. Clock Config
+    writeReg(0x01, 0x00); // Clock ON
+    writeReg(0x02, 0x00); // MCLK Div Auto
+    writeReg(0x03, 0x10); // Auto MCLK detection
+
+    // 4. Format: Slave, Standard I2S, 16-bit
+    writeReg(0x08, 0x00); // 0x00 = Slave, I2S Normal
+    writeReg(0x0B, 0x60); // 0x60 = 16-bit Data
+
+    // 5. Input Config (Mic 1 & 3)
+    writeReg(0x0E, 0x00); // ADC1 = Mic1
+    writeReg(0x0F, 0x11); // ADC2 = Mic3
+    writeReg(0x11, 0x14); // Output Stereo
+
+    // 6. Analog & Bias
+    writeReg(0x40, 0x42); // ADC/Bias ON
+    writeReg(0x41, 0x70); // Mic 1/2 Bias High
+    writeReg(0x42, 0x70); // Mic 3/4 Bias High
+
+    // 7. Gain (+30dB)
+    writeReg(0x43, 0x1E);
+    writeReg(0x44, 0x1E);
+    writeReg(0x45, 0x1E);
+    writeReg(0x46, 0x1E);
+
+    // 8. Power Up Inputs
+    writeReg(0x47, 0x00);
+    writeReg(0x48, 0x00);
+    writeReg(0x49, 0x00);
+    writeReg(0x4A, 0x00);
+
+    // 9. Unmute
+    writeReg(0x12, 0x00);
+    writeReg(0x13, 0x00);
+    writeReg(0x14, 0x00); 
+
+    // 10. Start
+    writeReg(0x09, 0x30);
+    writeReg(0x0A, 0x30);
+
     return true;
 }
 
 bool ES7210::stop() {
     updateReg(ES7210_POWER_DOWN_REG06, 0x03, 0x03); // Power down ADC
-    writeReg(0x14, 0x03); // Mute ADC1/2
+    writeReg(0x14, 0x00); // Unmute ADC channels
     return true;
 }
 
@@ -99,3 +148,7 @@ bool ES7210::setMicGain(uint8_t ch, float db) {
     if (step > 0x0F) step = 0x0F;
     return writeReg(reg, step) == ESP_OK;
 }
+
+//=================================================
+
+ bool is_mic_mode = false;

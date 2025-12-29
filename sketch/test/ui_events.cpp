@@ -5,14 +5,17 @@
 Preferences pref;
 #include "network/network.h"
 
-#include "record.h"
-#include "es8311/es8311.h"
+//#include "record.h"
 #include "file/file.h"
 #include "lcd_bl_bsp/lcd_bl_pwm_bsp.h"
 #include "pcf85063/pcf85063.h"
 #include "task_msg/task_msg.h"
 #include "weather/weather.h"
 #include <LittleFS.h>
+
+#include "ESP32-audioI2S-master/Audio.h"
+extern Audio audio;
+uint8_t audio_volume = 10;
 
 PCF85063 rtc;
 // global variable
@@ -124,8 +127,6 @@ void delete_screen_logo(lv_timer_t *timer) {
   lv_roller_set_selected(ui_MainMenu_Roller_Unit, temp_unit, LV_ANIM_OFF); // set index
 
   pref.end();
-
-  weatherAnimation(true);//enable weather info page animation
 
   SCREEN_OFF_TIMER = millis(); // reset timer
   wifiConnect();
@@ -333,8 +334,8 @@ void playpause(lv_event_t *e) {
     }
     case 2: // chatbot mode
             // do nothing (or add specific action for chatbot here)
-      lv_textarea_set_text(ui_Player_Textarea_status, "Recording 5S");
-    //  test_record_audio();
+      lv_textarea_set_text(ui_Player_Textarea_status, "Listenning...");
+     // test_record_audio();
 
       break; // Cleaned up: only one break needed
     }
@@ -643,6 +644,9 @@ void chatBotMode(lv_event_t *e) {
 void informationMode(lv_event_t *e) {
   SCREEN_OFF_TIMER = millis(); // reset timer
   BL_OFF = false; // auto backlight on
+  if (infoPageIndex == 0) {
+    weatherAnimation(true);
+  }
 }
 
 //--------------- CONFIGURATION  Menu ----------------------

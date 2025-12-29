@@ -5,7 +5,7 @@
 
 #include "../ui.h"
 
-lv_obj_t *ui_Screen_MainMenu = NULL;lv_obj_t *ui_MainMenu_Panel_Menu = NULL;lv_obj_t *ui_MainMenu_Image_LiveStreaming = NULL;lv_obj_t *ui_MainMenu_Image_MusicPlayer = NULL;lv_obj_t *ui_MainMenu_Image_ChatBot = NULL;lv_obj_t *ui_MainMenu_Image_Information = NULL;lv_obj_t *ui_MainMenu_Image_Config = NULL;lv_obj_t *ui_MainMenu_Tabview_ConfigPanel = NULL;lv_obj_t *ui_MainMenu_Tabpage_network = NULL;lv_obj_t *ui_MainMenu_Label_connectStatus = NULL;lv_obj_t *ui_MainMenu_Label_Label3 = NULL;lv_obj_t *ui_MainMenu_Dropdown_NetworkList = NULL;lv_obj_t *ui_MainMenu_Textarea_Password = NULL;lv_obj_t *ui_MainMenu_Button_NetworkSave = NULL;lv_obj_t *ui_MainMenu_Label_Label12 = NULL;lv_obj_t *ui_MainMenu_Button_NetworkScan = NULL;lv_obj_t *ui_MainMenu_Label_Label13 = NULL;lv_obj_t *ui_MainMenu_Tabpage_screen = NULL;lv_obj_t *ui_MainMenu_Dropdown_Brightness = NULL;lv_obj_t *ui_MainMenu_Dropdown_SleepTimer = NULL;lv_obj_t *ui_MainMenu_Dropdown_Wallpaper = NULL;lv_obj_t *ui_MainMenu_Label_Label8 = NULL;lv_obj_t *ui_MainMenu_Tabpage_station = NULL;lv_obj_t *ui_MainMenu_Textarea_stationList = NULL;lv_obj_t *ui_MainMenu_Label_Label10 = NULL;lv_obj_t *ui_MainMenu_Button_LoadStation = NULL;lv_obj_t *ui_MainMenu_Label_Label20 = NULL;lv_obj_t *ui_MainMenu_Tabpage_music = NULL;lv_obj_t *ui_MainMenu_Button_scanMusic = NULL;lv_obj_t *ui_MainMenu_Label_Label14 = NULL;lv_obj_t *ui_MainMenu_Label_Label15 = NULL;lv_obj_t *ui_MainMenu_Label_trackCount = NULL;lv_obj_t *ui_MainMenu_Tabpage_region = NULL;lv_obj_t *ui_MainMenu_Image_Globe = NULL;lv_obj_t *ui_MainMenu_Checkbox_AutoIP = NULL;lv_obj_t *ui_MainMenu_Textarea_Latitude = NULL;lv_obj_t *ui_MainMenu_Textarea_Longitude = NULL;lv_obj_t *ui_MainMenu_Image_timezone = NULL;lv_obj_t *ui_MainMenu_Roller_Hour = NULL;lv_obj_t *ui_MainMenu_Roller_Minute = NULL;lv_obj_t *ui_MainMenu_Roller_Unit = NULL;lv_obj_t *ui_MainMenu_Label_Label25 = NULL;lv_obj_t *ui_MainMenu_Tabpage_guide = NULL;lv_obj_t *ui_MainMenu_Label_build = NULL;lv_obj_t *ui_MainMenu_Image_logo = NULL;lv_obj_t *ui_MainMenu_Image_qrcode = NULL;lv_obj_t *ui_MainMenu_Label_Label11 = NULL;lv_obj_t *ui_MainMenu_Textarea_TextArea2 = NULL;lv_obj_t *ui_MainMenu_Image_buttons = NULL;lv_obj_t *ui_MainMenu_Button_closeConfig = NULL;lv_obj_t *ui_MainMenu_Label_Label9 = NULL;lv_obj_t *ui_MainMenu_Keyboard_Keyboard1 = NULL;lv_obj_t *ui_MainMenu_Keyboard_Number = NULL;lv_obj_t *ui_MainMenu_Panel_blindPanel = NULL;
+lv_obj_t *ui_Screen_MainMenu = NULL;lv_obj_t *ui_MainMenu_Panel_Menu = NULL;lv_obj_t *ui_MainMenu_Image_LiveStreaming = NULL;lv_obj_t *ui_MainMenu_Image_MusicPlayer = NULL;lv_obj_t *ui_MainMenu_Image_ChatBot = NULL;lv_obj_t *ui_MainMenu_Image_Information = NULL;lv_obj_t *ui_MainMenu_Image_Utility = NULL;lv_obj_t *ui_MainMenu_Image_Config = NULL;lv_obj_t *ui_MainMenu_Tabview_ConfigPanel = NULL;lv_obj_t *ui_MainMenu_Tabpage_network = NULL;lv_obj_t *ui_MainMenu_Label_connectStatus = NULL;lv_obj_t *ui_MainMenu_Label_Label3 = NULL;lv_obj_t *ui_MainMenu_Dropdown_NetworkList = NULL;lv_obj_t *ui_MainMenu_Textarea_Password = NULL;lv_obj_t *ui_MainMenu_Button_NetworkSave = NULL;lv_obj_t *ui_MainMenu_Label_Label12 = NULL;lv_obj_t *ui_MainMenu_Button_NetworkScan = NULL;lv_obj_t *ui_MainMenu_Label_Label13 = NULL;lv_obj_t *ui_MainMenu_Tabpage_screen = NULL;lv_obj_t *ui_MainMenu_Dropdown_Brightness = NULL;lv_obj_t *ui_MainMenu_Dropdown_SleepTimer = NULL;lv_obj_t *ui_MainMenu_Dropdown_Wallpaper = NULL;lv_obj_t *ui_MainMenu_Label_Label8 = NULL;lv_obj_t *ui_MainMenu_Tabpage_station = NULL;lv_obj_t *ui_MainMenu_Textarea_stationList = NULL;lv_obj_t *ui_MainMenu_Label_Label10 = NULL;lv_obj_t *ui_MainMenu_Button_LoadStation = NULL;lv_obj_t *ui_MainMenu_Label_Label20 = NULL;lv_obj_t *ui_MainMenu_Tabpage_music = NULL;lv_obj_t *ui_MainMenu_Button_scanMusic = NULL;lv_obj_t *ui_MainMenu_Label_Label14 = NULL;lv_obj_t *ui_MainMenu_Label_Label15 = NULL;lv_obj_t *ui_MainMenu_Label_trackCount = NULL;lv_obj_t *ui_MainMenu_Tabpage_region = NULL;lv_obj_t *ui_MainMenu_Image_Globe = NULL;lv_obj_t *ui_MainMenu_Checkbox_AutoIP = NULL;lv_obj_t *ui_MainMenu_Textarea_Latitude = NULL;lv_obj_t *ui_MainMenu_Textarea_Longitude = NULL;lv_obj_t *ui_MainMenu_Image_timezone = NULL;lv_obj_t *ui_MainMenu_Roller_Hour = NULL;lv_obj_t *ui_MainMenu_Roller_Minute = NULL;lv_obj_t *ui_MainMenu_Roller_Unit = NULL;lv_obj_t *ui_MainMenu_Label_Label25 = NULL;lv_obj_t *ui_MainMenu_Tabpage_guide = NULL;lv_obj_t *ui_MainMenu_Textarea_UserGuide = NULL;lv_obj_t *ui_MainMenu_Image_buttons = NULL;lv_obj_t *ui_MainMenu_Button_closeConfig = NULL;lv_obj_t *ui_MainMenu_Label_Label9 = NULL;lv_obj_t *ui_MainMenu_Keyboard_Keyboard1 = NULL;lv_obj_t *ui_MainMenu_Keyboard_Number = NULL;lv_obj_t *ui_MainMenu_Panel_blindPanel = NULL;
 // event funtions
 void ui_event_MainMenu_Panel_Menu( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -20,7 +20,7 @@ void ui_event_MainMenu_Image_LiveStreaming( lv_event_t * e) {
 
 if ( event_code == LV_EVENT_CLICKED) {
       bounce_Animation(ui_MainMenu_Image_LiveStreaming, 0);
-      _ui_screen_change( &ui_Screen_Player, LV_SCR_LOAD_ANIM_MOVE_TOP, 500, 0, &ui_Screen_Player_screen_init);
+      _ui_screen_change( &ui_Screen_Player, LV_SCR_LOAD_ANIM_OVER_TOP, 500, 0, &ui_Screen_Player_screen_init);
       livestreamMode( e );
 }
 if ( event_code == LV_EVENT_PRESSED) {
@@ -34,7 +34,7 @@ void ui_event_MainMenu_Image_MusicPlayer( lv_event_t * e) {
 if ( event_code == LV_EVENT_CLICKED) {
       bounce_Animation(ui_MainMenu_Image_MusicPlayer, 0);
       musicPlayerMode( e );
-      _ui_screen_change( &ui_Screen_Player, LV_SCR_LOAD_ANIM_MOVE_TOP, 500, 0, &ui_Screen_Player_screen_init);
+      _ui_screen_change( &ui_Screen_Player, LV_SCR_LOAD_ANIM_OVER_TOP, 500, 0, &ui_Screen_Player_screen_init);
 }
 if ( event_code == LV_EVENT_PRESSED) {
       resetScreenOffTimer( e );
@@ -47,7 +47,7 @@ void ui_event_MainMenu_Image_ChatBot( lv_event_t * e) {
 if ( event_code == LV_EVENT_CLICKED) {
       bounce_Animation(ui_MainMenu_Image_ChatBot, 0);
       chatBotMode( e );
-      _ui_screen_change( &ui_Screen_Player, LV_SCR_LOAD_ANIM_MOVE_TOP, 500, 0, &ui_Screen_Player_screen_init);
+      _ui_screen_change( &ui_Screen_Player, LV_SCR_LOAD_ANIM_OVER_TOP, 500, 0, &ui_Screen_Player_screen_init);
 }
 if ( event_code == LV_EVENT_PRESSED) {
       resetScreenOffTimer( e );
@@ -58,8 +58,20 @@ void ui_event_MainMenu_Image_Information( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
 if ( event_code == LV_EVENT_CLICKED) {
-      _ui_screen_change( &ui_Screen_Info, LV_SCR_LOAD_ANIM_MOVE_BOTTOM, 500, 0, &ui_Screen_Info_screen_init);
+      _ui_screen_change( &ui_Screen_Info, LV_SCR_LOAD_ANIM_OVER_BOTTOM, 500, 0, &ui_Screen_Info_screen_init);
       informationMode( e );
+}
+if ( event_code == LV_EVENT_PRESSED) {
+      resetScreenOffTimer( e );
+}
+}
+
+void ui_event_MainMenu_Image_Utility( lv_event_t * e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+if ( event_code == LV_EVENT_CLICKED) {
+      _ui_screen_change( &ui_Screen_Utility, LV_SCR_LOAD_ANIM_OVER_TOP, 500, 0, &ui_Screen_Utility_screen_init);
+      utilityMode( e );
 }
 if ( event_code == LV_EVENT_PRESSED) {
       resetScreenOffTimer( e );
@@ -257,7 +269,7 @@ if ( event_code == LV_EVENT_PRESSED) {
 }
 }
 
-void ui_event_MainMenu_Textarea_TextArea2( lv_event_t * e) {
+void ui_event_MainMenu_Textarea_UserGuide( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
 if ( event_code == LV_EVENT_PRESSED) {
@@ -268,7 +280,7 @@ if ( event_code == LV_EVENT_PRESSED) {
 void ui_event_MainMenu_Button_closeConfig( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
-if ( event_code == LV_EVENT_PRESSED) {
+if ( event_code == LV_EVENT_CLICKED) {
       _ui_flag_modify( ui_MainMenu_Button_closeConfig, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
       _ui_flag_modify( ui_MainMenu_Tabview_ConfigPanel, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
       saveConfig( e );
@@ -366,13 +378,23 @@ lv_obj_clear_flag( ui_MainMenu_Image_Information, LV_OBJ_FLAG_PRESS_LOCK | LV_OB
 lv_obj_set_style_border_color(ui_MainMenu_Image_Information, lv_color_hex(0x67B1FC), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_border_opa(ui_MainMenu_Image_Information, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_border_width(ui_MainMenu_Image_Information, 3, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_border_side(ui_MainMenu_Image_Information, LV_BORDER_SIDE_LEFT, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_border_side(ui_MainMenu_Image_Information, LV_BORDER_SIDE_TOP, LV_PART_MAIN| LV_STATE_DEFAULT);
+
+ui_MainMenu_Image_Utility = lv_img_create(ui_MainMenu_Panel_Menu);
+lv_img_set_src(ui_MainMenu_Image_Utility, &ui_img_images_utility_png);
+lv_obj_set_width( ui_MainMenu_Image_Utility, 150);
+lv_obj_set_height( ui_MainMenu_Image_Utility, 140);
+lv_obj_set_x( ui_MainMenu_Image_Utility, 680 );
+lv_obj_set_y( ui_MainMenu_Image_Utility, 0 );
+lv_obj_set_align( ui_MainMenu_Image_Utility, LV_ALIGN_LEFT_MID );
+lv_obj_add_flag( ui_MainMenu_Image_Utility, LV_OBJ_FLAG_CLICKABLE );   /// Flags
+lv_obj_clear_flag( ui_MainMenu_Image_Utility, LV_OBJ_FLAG_PRESS_LOCK | LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_GESTURE_BUBBLE | LV_OBJ_FLAG_SNAPPABLE | LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 
 ui_MainMenu_Image_Config = lv_img_create(ui_MainMenu_Panel_Menu);
 lv_img_set_src(ui_MainMenu_Image_Config, &ui_img_images_settings_png);
 lv_obj_set_width( ui_MainMenu_Image_Config, 125);
 lv_obj_set_height( ui_MainMenu_Image_Config, 125);
-lv_obj_set_x( ui_MainMenu_Image_Config, 680 );
+lv_obj_set_x( ui_MainMenu_Image_Config, 850 );
 lv_obj_set_y( ui_MainMenu_Image_Config, 0 );
 lv_obj_set_align( ui_MainMenu_Image_Config, LV_ALIGN_LEFT_MID );
 lv_obj_add_flag( ui_MainMenu_Image_Config, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_ADV_HITTEST );   /// Flags
@@ -733,65 +755,21 @@ lv_obj_set_style_text_align(ui_MainMenu_Label_Label25, LV_TEXT_ALIGN_LEFT, LV_PA
 ui_MainMenu_Tabpage_guide = lv_tabview_add_tab(ui_MainMenu_Tabview_ConfigPanel, "User Guide");
 lv_obj_set_scroll_dir(ui_MainMenu_Tabpage_guide, LV_DIR_VER);
 
-ui_MainMenu_Label_build = lv_label_create(ui_MainMenu_Tabpage_guide);
-lv_obj_set_width( ui_MainMenu_Label_build, 313);
-lv_obj_set_height( ui_MainMenu_Label_build, LV_SIZE_CONTENT);   /// 1
-lv_obj_set_x( ui_MainMenu_Label_build, -22 );
-lv_obj_set_y( ui_MainMenu_Label_build, -12 );
-lv_obj_set_align( ui_MainMenu_Label_build, LV_ALIGN_TOP_MID );
-lv_label_set_text(ui_MainMenu_Label_build,"BUILD :\nSERIAL:\nVa&Cob");
-lv_obj_set_style_text_color(ui_MainMenu_Label_build, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT );
-lv_obj_set_style_text_opa(ui_MainMenu_Label_build, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_text_letter_space(ui_MainMenu_Label_build, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_text_line_space(ui_MainMenu_Label_build, 10, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_text_font(ui_MainMenu_Label_build, &ui_font_NotoSanThai16, LV_PART_MAIN| LV_STATE_DEFAULT);
+ui_MainMenu_Textarea_UserGuide = lv_textarea_create(ui_MainMenu_Tabpage_guide);
+lv_obj_set_width( ui_MainMenu_Textarea_UserGuide, 640);
+lv_obj_set_height( ui_MainMenu_Textarea_UserGuide, LV_SIZE_CONTENT);   /// 1
+lv_obj_set_x( ui_MainMenu_Textarea_UserGuide, 0 );
+lv_obj_set_y( ui_MainMenu_Textarea_UserGuide, -17 );
+lv_obj_set_align( ui_MainMenu_Textarea_UserGuide, LV_ALIGN_TOP_MID );
+lv_textarea_set_text(ui_MainMenu_Textarea_UserGuide,"[Wi-Fi ] - Automatic Connection Setup\n\nSet up your device to automatically connect to your preferred Wi-Fi networks (up to 10 SSIDs).\n- Tap SCAN to search for nearby networks.\n- Select the network you wish to connect to from the dropdown list.\n- Enter the network password.\n- Tap SAVE to save the password\n- Please wait a moment, device is automatically connect to the network.\n\n[ Screen ] - Display Settings\n\nAdjust the behavior of your device's screen.\n- Set Screen Brightness: Adjust the display intensity.\n- Set Screen Off Timer: Control how long the screen stays on after inactivity.\n- Setting the timer to 0 means the screen will always stay on.\n\n[ Radio ] - Custom Radio Station List\n\nYou can create and upload a custom list of radio stations.\n- Create your own stations list using the CSV format in a file named stations.csv (title,url http only)\n- Save the stations.csv file onto your SD Card.\n- Tap UPLOAD to load your custom station list.\n- If the stations.csv file is not available, the device will use the default station list.\n\n[ Music ] - Update Music Library\n\nLoad audio files from your SD Card to create your music library.\n- Supported audio formats include: mp3, flac, aac, and ogg.\n- Copy your audio files to the SD Card. Files can be placed in the root directory or in subfolders (up to 5 levels deep).\n- Tap LOAD to build the music library.\n* Note: This process may take some time, depending on the number of audio files on the SD Card.\n\n[ Region ] - Set weather & clock region\n\n* Auto by IP - the location will be automatically detected by IP\n* Manual -  enter specific Latitude / Longitude\n* UTC offset - set timezone offset\n* Temp - set weather unit Celcius / Farenheit\n\n[ Button Control ]\n\n           [ RESET    ] -  Reset TuneBar\n\n           [ POWER ] - Hold a sec to turn on/ hold 3 sec to turn off\n\n           [  LIGHT  ] - Toggle screen ON/OFF");
+lv_obj_add_flag( ui_MainMenu_Textarea_UserGuide, LV_OBJ_FLAG_SCROLL_ONE );   /// Flags
+lv_obj_set_scroll_dir(ui_MainMenu_Textarea_UserGuide, LV_DIR_VER);
+lv_obj_set_style_text_color(ui_MainMenu_Textarea_UserGuide, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_text_opa(ui_MainMenu_Textarea_UserGuide, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_bg_color(ui_MainMenu_Textarea_UserGuide, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_bg_opa(ui_MainMenu_Textarea_UserGuide, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 
-ui_MainMenu_Image_logo = lv_img_create(ui_MainMenu_Tabpage_guide);
-lv_img_set_src(ui_MainMenu_Image_logo, &ui_img_images_tunebar_png);
-lv_obj_set_width( ui_MainMenu_Image_logo, LV_SIZE_CONTENT);  /// 1
-lv_obj_set_height( ui_MainMenu_Image_logo, LV_SIZE_CONTENT);   /// 1
-lv_obj_set_x( ui_MainMenu_Image_logo, -33 );
-lv_obj_set_y( ui_MainMenu_Image_logo, 0 );
-lv_obj_set_align( ui_MainMenu_Image_logo, LV_ALIGN_LEFT_MID );
-lv_obj_add_flag( ui_MainMenu_Image_logo, LV_OBJ_FLAG_ADV_HITTEST );   /// Flags
-lv_obj_clear_flag( ui_MainMenu_Image_logo, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
-lv_img_set_zoom(ui_MainMenu_Image_logo,200);
-
-ui_MainMenu_Image_qrcode = lv_img_create(ui_MainMenu_Tabpage_guide);
-lv_img_set_src(ui_MainMenu_Image_qrcode, &ui_img_images_qr_png);
-lv_obj_set_width( ui_MainMenu_Image_qrcode, LV_SIZE_CONTENT);  /// 1
-lv_obj_set_height( ui_MainMenu_Image_qrcode, LV_SIZE_CONTENT);   /// 1
-lv_obj_set_x( ui_MainMenu_Image_qrcode, -43 );
-lv_obj_set_y( ui_MainMenu_Image_qrcode, 0 );
-lv_obj_set_align( ui_MainMenu_Image_qrcode, LV_ALIGN_RIGHT_MID );
-lv_obj_add_flag( ui_MainMenu_Image_qrcode, LV_OBJ_FLAG_ADV_HITTEST );   /// Flags
-lv_obj_clear_flag( ui_MainMenu_Image_qrcode, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
-
-ui_MainMenu_Label_Label11 = lv_label_create(ui_MainMenu_Tabpage_guide);
-lv_obj_set_width( ui_MainMenu_Label_Label11, 312);
-lv_obj_set_height( ui_MainMenu_Label_Label11, LV_SIZE_CONTENT);   /// 1
-lv_obj_set_x( ui_MainMenu_Label_Label11, 126 );
-lv_obj_set_y( ui_MainMenu_Label_Label11, 80 );
-lv_label_set_text(ui_MainMenu_Label_Label11,"Scan QR code for more information -->\n^^^^ Swipe up to view user guide  ^^^^");
-lv_obj_set_style_text_color(ui_MainMenu_Label_Label11, lv_color_hex(0xF0FF00), LV_PART_MAIN | LV_STATE_DEFAULT );
-lv_obj_set_style_text_opa(ui_MainMenu_Label_Label11, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_text_font(ui_MainMenu_Label_Label11, &lv_font_montserrat_16, LV_PART_MAIN| LV_STATE_DEFAULT);
-
-ui_MainMenu_Textarea_TextArea2 = lv_textarea_create(ui_MainMenu_Tabpage_guide);
-lv_obj_set_width( ui_MainMenu_Textarea_TextArea2, 640);
-lv_obj_set_height( ui_MainMenu_Textarea_TextArea2, LV_SIZE_CONTENT);   /// 1
-lv_obj_set_x( ui_MainMenu_Textarea_TextArea2, 0 );
-lv_obj_set_y( ui_MainMenu_Textarea_TextArea2, 128 );
-lv_obj_set_align( ui_MainMenu_Textarea_TextArea2, LV_ALIGN_TOP_MID );
-lv_textarea_set_text(ui_MainMenu_Textarea_TextArea2,"[Wi-Fi ] - Automatic Connection Setup\n\nSet up your device to automatically connect to your preferred Wi-Fi networks (up to 10 SSIDs).\n- Tap SCAN to search for nearby networks.\n- Select the network you wish to connect to from the dropdown list.\n- Enter the network password.\n- Tap SAVE to save the password\n- Please wait a moment, device is automatically connect to the network.\n\n[ Screen ] - Display Settings\n\nAdjust the behavior of your device's screen.\n- Set Screen Brightness: Adjust the display intensity.\n- Set Screen Off Timer: Control how long the screen stays on after inactivity.\n- Setting the timer to 0 means the screen will always stay on.\n\n[ Radio ] - Custom Radio Station List\n\nYou can create and upload a custom list of radio stations.\n- Create your own stations list using the CSV format in a file named stations.csv (title,url http only)\n- Save the stations.csv file onto your SD Card.\n- Tap UPLOAD to load your custom station list.\n- If the stations.csv file is not available, the device will use the default station list.\n\n[ Music ] - Update Music Library\n\nLoad audio files from your SD Card to create your music library.\n- Supported audio formats include: mp3, flac, aac, and ogg.\n- Copy your audio files to the SD Card. Files can be placed in the root directory or in subfolders (up to 5 levels deep).\n- Tap LOAD to build the music library.\n* Note: This process may take some time, depending on the number of audio files on the SD Card.\n\n[ Region ] - Set weather & clock region\n\n* Auto by IP - the location will be automatically detected by IP\n* Manual -  enter specific Latitude / Longitude\n* UTC offset - set timezone offset\n* Temp - set weather unit Celcius / Farenheit\n\n[ Button Control ]\n\n           [ RESET    ] -  Reset TuneBar\n\n           [ POWER ] - Hold a sec to turn on/ hold 3 sec to turn off\n\n           [  LIGHT  ] - Toggle screen ON/OFF");
-lv_obj_add_flag( ui_MainMenu_Textarea_TextArea2, LV_OBJ_FLAG_SCROLL_ON_FOCUS | LV_OBJ_FLAG_SCROLL_WITH_ARROW | LV_OBJ_FLAG_SCROLL_ONE );   /// Flags
-lv_obj_set_scroll_dir(ui_MainMenu_Textarea_TextArea2, LV_DIR_VER);
-lv_obj_set_style_text_color(ui_MainMenu_Textarea_TextArea2, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT );
-lv_obj_set_style_text_opa(ui_MainMenu_Textarea_TextArea2, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_bg_color(ui_MainMenu_Textarea_TextArea2, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
-lv_obj_set_style_bg_opa(ui_MainMenu_Textarea_TextArea2, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
-
-ui_MainMenu_Image_buttons = lv_img_create(ui_MainMenu_Textarea_TextArea2);
+ui_MainMenu_Image_buttons = lv_img_create(ui_MainMenu_Textarea_UserGuide);
 lv_img_set_src(ui_MainMenu_Image_buttons, &ui_img_images_button_png);
 lv_obj_set_width( ui_MainMenu_Image_buttons, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_MainMenu_Image_buttons, LV_SIZE_CONTENT);   /// 1
@@ -859,6 +837,7 @@ lv_obj_add_event_cb(ui_MainMenu_Image_LiveStreaming, ui_event_MainMenu_Image_Liv
 lv_obj_add_event_cb(ui_MainMenu_Image_MusicPlayer, ui_event_MainMenu_Image_MusicPlayer, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Image_ChatBot, ui_event_MainMenu_Image_ChatBot, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Image_Information, ui_event_MainMenu_Image_Information, LV_EVENT_ALL, NULL);
+lv_obj_add_event_cb(ui_MainMenu_Image_Utility, ui_event_MainMenu_Image_Utility, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Image_Config, ui_event_MainMenu_Image_Config, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Panel_Menu, ui_event_MainMenu_Panel_Menu, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Textarea_Password, ui_event_MainMenu_Textarea_Password, LV_EVENT_ALL, NULL);
@@ -880,7 +859,7 @@ lv_obj_add_event_cb(ui_MainMenu_Roller_Hour, ui_event_MainMenu_Roller_Hour, LV_E
 lv_obj_add_event_cb(ui_MainMenu_Roller_Minute, ui_event_MainMenu_Roller_Minute, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Roller_Unit, ui_event_MainMenu_Roller_Unit, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Tabpage_region, ui_event_MainMenu_Tabpage_region, LV_EVENT_ALL, NULL);
-lv_obj_add_event_cb(ui_MainMenu_Textarea_TextArea2, ui_event_MainMenu_Textarea_TextArea2, LV_EVENT_ALL, NULL);
+lv_obj_add_event_cb(ui_MainMenu_Textarea_UserGuide, ui_event_MainMenu_Textarea_UserGuide, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Tabpage_guide, ui_event_MainMenu_Tabpage_guide, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Tabview_ConfigPanel, ui_event_MainMenu_Tabview_ConfigPanel, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Button_closeConfig, ui_event_MainMenu_Button_closeConfig, LV_EVENT_ALL, NULL);
@@ -903,6 +882,7 @@ ui_MainMenu_Image_LiveStreaming= NULL;
 ui_MainMenu_Image_MusicPlayer= NULL;
 ui_MainMenu_Image_ChatBot= NULL;
 ui_MainMenu_Image_Information= NULL;
+ui_MainMenu_Image_Utility= NULL;
 ui_MainMenu_Image_Config= NULL;
 ui_MainMenu_Tabview_ConfigPanel= NULL;
 ui_MainMenu_Tabpage_network= NULL;
@@ -940,11 +920,7 @@ ui_MainMenu_Roller_Minute= NULL;
 ui_MainMenu_Roller_Unit= NULL;
 ui_MainMenu_Label_Label25= NULL;
 ui_MainMenu_Tabpage_guide= NULL;
-ui_MainMenu_Label_build= NULL;
-ui_MainMenu_Image_logo= NULL;
-ui_MainMenu_Image_qrcode= NULL;
-ui_MainMenu_Label_Label11= NULL;
-ui_MainMenu_Textarea_TextArea2= NULL;
+ui_MainMenu_Textarea_UserGuide= NULL;
 ui_MainMenu_Image_buttons= NULL;
 ui_MainMenu_Button_closeConfig= NULL;
 ui_MainMenu_Label_Label9= NULL;

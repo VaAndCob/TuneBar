@@ -6,6 +6,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <esp_ota_ops.h>
+#include <LittleFS.h>
 
 const char *compile_date = __DATE__ " - " __TIME__;
 const char *current_version = "1.1.0";
@@ -48,7 +49,7 @@ int versionToNumber(const char *version) {
 //----------------------------------------
 // check a new firmware version available on github
 bool newFirmwareAvailable() {
-  log_i("Checking firmware updates - Current version: %s", current_version);
+  log_i(" Current version: %s", current_version);
 
 #define MAX_URL_LENGTH 256 // กำหนดขนาดบัฟเฟอร์สูงสุดที่ปลอดภัย
 #define JSON_BUF_SIZE 1024
@@ -152,3 +153,44 @@ bool performOnlineUpdate() { // download file from github and update
   return false;
 } // performUpdate
 //-------------------------------
+
+// memory and system info
+void memoryInfo(char *buf, size_t len) {
+    size_t ifree = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    size_t imin  = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
+    size_t ilarge = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+
+    size_t pfree = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    size_t pmin  = heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM);
+    size_t plarge = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+
+    snprintf(buf, len,
+             "Memory : Free / Min / Largest (bytes)\n"
+             "IRAM : %u / %u / %u\n"
+             "PSRAM: %u / %u / %u",
+             (unsigned)ifree, (unsigned)imin, (unsigned)ilarge,
+             (unsigned)pfree, (unsigned)pmin, (unsigned)plarge);
+      log_d("%s", buf);
+}
+
+void systemInfo(char *buf, size_t len) {
+  size_t used  = LittleFS.usedBytes();
+  size_t total = LittleFS.totalBytes();
+  float pct_free = (float)(total - used) * 100.0f / (float)total;
+  uint64_t mac = ESP.getEfuseMac();
+  snprintf(
+        buf,
+        len,
+        "[ TuneBar by Va&Cob ]\n"
+        "BUILD  : %s - %s\n"
+        "SERIAL : %012" PRIx64 "\n"
+        "STORAGE : %u / %u KB (%.1f %% free)",
+        current_version,
+        compile_date,
+        mac,
+        (unsigned)(used / 1024),
+        (unsigned)(total / 1024),
+        pct_free
+    );
+  log_d("%s", buf);
+}

@@ -1,14 +1,21 @@
 {
 	"folders": [
 		{
-			"path": "."
+			"path": ".",
+     		"name": "Project Root",
+      		"settings": {
+      		"search.exclude": {
+       		"**/*": true
+        }
+      }
 		},
 		{
 			"path": "sketch"
 		}
 	],
 	"settings": {
-		"platformio-ide.workspaceDir": "sketch"
+	//	"platformio-ide.workspaceDir": "sketch"
 
-	}
+	},
+
 }

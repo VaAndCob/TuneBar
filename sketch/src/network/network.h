@@ -17,6 +17,3 @@ void wifiConnect();
 
 void sanitizeJson(char *buf);
 bool fetchUrlData(const char *url, bool ssl, char *outBuf, size_t outBufSize);
-
-void memoryInfo(char *buf, size_t len);
-void systemInfo(char *buf, size_t len);

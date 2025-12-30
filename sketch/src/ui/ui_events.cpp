@@ -41,12 +41,11 @@ void lv_create_delayed_task(lv_timer_cb_t callback, uint32_t delay_ms, void *use
   lv_timer_set_repeat_count(timer, 1); // Set the timer to run only once
 }
 // initalize lvgl ui
-void delete_screen_logo(lv_timer_t *timer) {
+void init_main_menu_task(lv_timer_t *timer) {
   lv_timer_del(timer);
   lv_scr_load_anim(ui_Screen_MainMenu, LV_SCR_LOAD_ANIM_FADE_IN, 500, 0, true); // delete old screen
 
   // init widgets
-
   lv_label_set_text(ui_Player_Label_Label1, LV_SYMBOL_VOLUME_MAX);
   lv_label_set_text(ui_Player_Label_Label2, LV_SYMBOL_VOLUME_MID);
   lv_label_set_text(ui_Player_Label_Label4, LV_SYMBOL_NEXT);
@@ -140,7 +139,7 @@ void appStart(lv_event_t *e) {
   initLittleFS(); // iniit LittleFS
   audioSetVolume(audio_volume);
   audioPlayFS(1, "/audio/on.mp3");
-  lv_create_delayed_task(delete_screen_logo, 2500, NULL); // show display logo for 2.5 second and start initializing widgets
+  lv_create_delayed_task(init_main_menu_task, 2500, NULL); // show display logo for 2.5 second and start initializing widgets
 }
 
 //---------------- Volume control ------------------------------

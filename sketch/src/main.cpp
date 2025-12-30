@@ -39,6 +39,7 @@
 #include "pcf85063/pcf85063.h" // real time clock
 #include "tca9554/tca9554.h" // io expander
 #include "weather/weather.h" // weather air quality widget
+#include "network/network.h" // wifi network
 
 extern Audio audio;
 ES8311 speaker; // ES8322 (DAC)  →  I2S_NUM_0  (TX)
@@ -57,7 +58,7 @@ QueueHandle_t audio_cmd_queue = NULL;
 
 // ############################################################
 void setup() {
-
+  
   // message que init
   ui_status_queue = xQueueCreate(20, sizeof(UIStatusPayload));
   assert(ui_status_queue != NULL);
@@ -112,8 +113,6 @@ void setup() {
   else
     log_i("Power Amp -> ON");
 
- 
-
   // es8311 audio codec
   speaker.setVolume(80); // 80 is best max
   if (!speaker.begin())
@@ -131,11 +130,10 @@ void setup() {
   // Free RTOS Task
   xTaskCreatePinnedToCore(audio_loop_task, "audio_loop", 6 * 1024, NULL, 4, NULL, 1);
   xTaskCreatePinnedToCore(rtc_read_task, "getDateTimeTask", 3 * 1024, NULL, 3, NULL, 1);
-  xTaskCreatePinnedToCore(button_input_task, "buttonInputTask", 3 * 1024, NULL, 2, NULL, 1);
-  xTaskCreatePinnedToCore(batt_level_read_task, "readBatteryLevel", 3 * 1024, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(button_input_task, "buttonInputTask", 2 * 1024, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(batt_level_read_task, "readBatteryLevel", 2 * 1024, NULL, 1, NULL, 1);
   //xTaskCreatePinnedToCore(imu_read_task, "imu_read_task", 3 * 1024, NULL , 1, NULL,1);
 
-  memory_info();
 
 }
 // ############################################################

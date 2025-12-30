@@ -1,16 +1,15 @@
 #include "weather.h"
 #include "network/network.h"
+#include "pcf85063/pcf85063.h"
 #include "ui/ui.h"
 #include <Arduino.h>
-
-#include "pcf85063/pcf85063.h"
 #include <ArduinoJson.h>
 
 const char *weatherUrl = "http://api.weatherapi.com/v1/current.json?key=%s&q=%s&aqi=yes";
 //"https://api.weatherapi.com/v1/current.json?key=%s&q=%s&aqi=yes"; for SSL
 const char *weatherApiKey = "1f00c88f3483483a9ba62101250612";
 
-String query_parameter = "auto:ip"; // auto detect by IP , or city name "Bangkok", or "lat,long" 13.6499579,100.4103726
+char query_parameter[64] = "auto:ip"; // auto detect by IP , or city name "Bangkok", or "lat,long" 13.6499579,100.4103726
 const int8_t UTC_offset_hour[27] = {14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12};
 const int8_t UTC_offset_minute[7] = {45, 30, 15, 0, -15, -30, -45};
 uint8_t temp_unit = 0; // unit index  0=celcius, 1 = farenheit
@@ -20,20 +19,19 @@ uint8_t offset_minute_index = 0;
 
 static TaskHandle_t weatherTask = NULL;
 
-#define MAX_URL_LENGTH 256 // กำหนดขนาดบัฟเฟอร์สูงสุดที่ปลอดภัย
-
 struct Weather_JSON { // all aqi data from json
-  String state;
+  char state[64];
+
   uint8_t usepa_index;
   const char *name;
-  String last_updated;
+  char last_updated[32];
 
   float temp_c;
   float temp_f;
   float wind_kph;
   float wind_mph;
   float wind_degree;
-  String wind_dir;
+  char wind_dir[8];
   float pressure_mb;
   float pressure_in;
   float precip_mm;
@@ -306,181 +304,215 @@ int calculate_IAQI(float Cp, const AQI_Breakpoint breakpoints[], int num_breakpo
 }
 
 //---------------- parse AQI data from JSON and calculate US AQI and dominant pollutant
-String USAQI = "";
-String dominantPollutant = "";
-void parseAQI(float co, float no2, float o3, float so2, float pm2_5, float pm10) {
+char USAQI[8];                    // enough for "500\0"
+char dominantPollutant[64];       // "PM2.5 | 123.45 ug/m3"
+void parseAQI(float co, float no2, float o3, float so2, float pm2_5, float pm10)
+{
+    // convert to required units
+    float C_pm25   = pm2_5;
+    float C_pm10   = pm10;
+    float C_o3_ppm = ugm3_to_ppm(o3,  MW_O3);
+    float C_co_ppm = ugm3_to_ppm(co,  MW_CO);
+    float C_so2_ppb = ugm3_to_ppb(so2, MW_SO2);
+    float C_no2_ppb = ugm3_to_ppb(no2, MW_NO2);
 
-  AirQualityData data = {
-      // create data structure
-      co, // CO ug/m3
-      no2, // NO2 ug/m3
-      o3, // O3 ug/m3
-      so2, // SO2 ug/m3
-      pm2_5, // PM2.5 ug/m3
-      pm10 // PM10 ug/m3
-  };
+    // computation bucket
+    typedef struct {
+        const char *name;
+        float concentration;
+        int aqi;
+    } PollutantResult;
 
-  // CONVERT UNITS (US EPA Breakpoints unit ppb and ppm for gas)
-  float C_pm25 = data.pm2_5;
-  float C_pm10 = data.pm10;
-  float C_o3_ppm = ugm3_to_ppm(data.o3, MW_O3); // O3: ug/m3 -> ppm
-  float C_co_ppm = ugm3_to_ppm(data.co, MW_CO); // CO: ug/m3 -> ppm
-  float C_so2_ppb = ugm3_to_ppb(data.so2, MW_SO2); // SO2: ug/m3 -> ppb
-  float C_no2_ppb = ugm3_to_ppb(data.no2, MW_NO2); // NO2: ug/m3 -> ppb
+    PollutantResult results[6];
 
-  // CALCULATE IAQI FOR EACH POLLUTANT (คำนวณ IAQI แต่ละตัว)
-  struct PollutantResult {
-    String name;
-    float concentration;
-    int aqi;
-  };
+    results[0] = { "PM2.5", C_pm25,   calculate_IAQI(C_pm25,   pm25_breakpoints,   NUM_PM25_BP) };
+    results[1] = { "PM10",  C_pm10,   calculate_IAQI(C_pm10,   pm10_breakpoints,   NUM_PM10_BP) };
+    results[2] = { "O3",    C_o3_ppm, calculate_IAQI(C_o3_ppm, o3_8hr_breakpoints, NUM_O3_8HR_BP) };
+    results[3] = { "CO",    C_co_ppm, calculate_IAQI(C_co_ppm, co_8hr_breakpoints, NUM_CO_8HR_BP) };
+    results[4] = { "SO2",   C_so2_ppb,calculate_IAQI(C_so2_ppb,so2_1hr_breakpoints,NUM_SO2_1HR_BP) };
+    results[5] = { "NO2",   C_no2_ppb,calculate_IAQI(C_no2_ppb,no2_1hr_breakpoints,NUM_NO2_1HR_BP) };
 
-  PollutantResult results[6];
-  results[0] = {"PM2.5", C_pm25, calculate_IAQI(C_pm25, pm25_breakpoints, NUM_PM25_BP)};
-  results[1] = {"PM10", C_pm10, calculate_IAQI(C_pm10, pm10_breakpoints, NUM_PM10_BP)};
-  results[2] = {"O3", C_o3_ppm, calculate_IAQI(C_o3_ppm, o3_8hr_breakpoints, NUM_O3_8HR_BP)};
-  results[3] = {"CO", C_co_ppm, calculate_IAQI(C_co_ppm, co_8hr_breakpoints, NUM_CO_8HR_BP)};
-  results[4] = {"SO2", C_so2_ppb, calculate_IAQI(C_so2_ppb, so2_1hr_breakpoints, NUM_SO2_1HR_BP)};
-  results[5] = {"NO2", C_no2_ppb, calculate_IAQI(C_no2_ppb, no2_1hr_breakpoints, NUM_NO2_1HR_BP)};
+    // find dominant pollutant
+    int   max_aqi = -1;
+    const char *dominant_name = "N/A";
+    float dominant_conc = 0.0;
 
-  // FIND DOMINANT POLLUTANT AND US AQI (find max value)
-  int max_aqi = -1;
-  String dominant_pollutant = "N/A";
-  float dominant_concentration = 0.0;
-
-  for (int i = 0; i < 6; i++) {
-    if (results[i].aqi > max_aqi) {
-      max_aqi = results[i].aqi;
-      dominant_pollutant = results[i].name;
-      dominant_concentration = results[i].concentration;
+    for (int i = 0; i < 6; i++) {
+        if (results[i].aqi > max_aqi) {
+            max_aqi = results[i].aqi;
+            dominant_name = results[i].name;
+            dominant_conc = results[i].concentration;
+        }
     }
-  }
-  // create dominant output text
-  String dominant = dominant_pollutant + " | " + String(dominant_concentration, 2);
-  String unit = "";
-  if (dominant_pollutant == "PM2.5" || dominant_pollutant == "PM10") {
-    unit = " ug/m3";
-  } else if (dominant_pollutant == "CO" || dominant_pollutant == "O3") {
-    unit = " ppm";
-  } else {
-    unit = " ppb";
-  }
-  // the result is here
-  dominantPollutant = dominant + unit; // resutl to show
-  USAQI = max_aqi; // resutl to show
 
-  log_d("US AQI Overall: %s", USAQI.c_str());
-  log_d("Dominant Pollutant: %s", dominantPollutant.c_str());
+    // ---- format USAQI text ----
+    snprintf(USAQI, sizeof(USAQI), "%d", max_aqi);
+
+    // ---- select unit ----
+    const char *unit;
+
+    if (strcmp(dominant_name, "PM2.5") == 0 || strcmp(dominant_name, "PM10") == 0)
+        unit = " ug/m3";
+    else if (strcmp(dominant_name, "CO") == 0 || strcmp(dominant_name, "O3") == 0)
+        unit = " ppm";
+    else
+        unit = " ppb";
+
+    // ---- final dominant pollutant string ----
+    snprintf(
+        dominantPollutant,
+        sizeof(dominantPollutant),
+        "%s | %.2f%s",
+        dominant_name,
+        dominant_conc,
+        unit
+    );
+
+    log_d("US AQI Overall: %s", USAQI);
+    log_d("Dominant Pollutant: %s", dominantPollutant);
 }
 
 //=============   update state, US AQI, dominant pollutant icon and text ===========================
 void updateWeatherPanelTask(void *parameter) {
+  log_i("fetch weather data");
+  TaskHandle_t self = weatherTask;
 
-  // 1. fetch weather condition data from weather API
+#define MAX_URL_LENGTH 512 // กำหนดขนาดบัฟเฟอร์สูงสุดที่ปลอดภัย
+#define JSON_BUF_SIZE 2048
   static char reqURL[MAX_URL_LENGTH];
-  snprintf(reqURL, MAX_URL_LENGTH, weatherUrl, weatherApiKey, query_parameter.c_str());
-  const String JSON_INPUT = fetchUrlData(reqURL); // fetch weather data
-  // 2. convert to json object
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, JSON_INPUT);
-  if (error) {
-    log_e("deserializeJson() failed: ");
-    vTaskDelete(NULL);
-    return;
-  }
-  // check of error
-  int errorCode = doc["error"]["code"].as<int>();
-  if (errorCode != 0) { // error occure
-    log_e("Error code: %d %s", errorCode, doc["error"]["message"].as<const char *>());
-    lv_label_set_text(ui_Info_Label_AQIlocation, "No data available");
-    lv_img_set_src(ui_Info_Image_AQIimage, ""); // icon
-    lv_obj_set_style_bg_color(ui_Info_Panel_AQI, lv_color_hex(0x777777), LV_PART_MAIN);
-    lv_label_set_text(ui_Info_Label_AQIrate, "Please try select another city");
-    lv_label_set_text(ui_Info_Label_AQIvalue, "-");
-    lv_label_set_text(ui_Info_Label_AQIdominant, "");
+  snprintf(reqURL, MAX_URL_LENGTH, weatherUrl, weatherApiKey, query_parameter);
 
-  } else { // dadta available
+  static char jsonBuf[JSON_BUF_SIZE];
+  static StaticJsonDocument<JSON_BUF_SIZE > doc;
 
-    Weather_JSON data;
-    // parsing data
-    data.last_updated = doc["current"]["last_updated"].as<String>();
-    data.state = doc["location"]["name"].as<String>();
-    // AQI
-    data.usepa_index = doc["current"]["air_quality"]["us-epa-index"].as<uint8_t>();
-    data.name = us_epa_index_names[data.usepa_index - 1]; // name of aqi level
-    data.co = doc["current"]["air_quality"]["co"].as<float>();
-    data.no2 = doc["current"]["air_quality"]["no2"].as<float>();
-    data.o3 = doc["current"]["air_quality"]["o3"].as<float>();
-    data.so2 = doc["current"]["air_quality"]["so2"].as<float>();
-    data.pm2_5 = doc["current"]["air_quality"]["pm2_5"].as<float>();
-    data.pm10 = doc["current"]["air_quality"]["pm10"].as<float>();
-    // weather condition
-    data.temp_c = doc["current"]["temp_c"].as<float>();
-    data.temp_f = doc["current"]["temp_f"].as<float>();
-    data.wind_kph = doc["current"]["wind_kph"].as<float>();
-    data.wind_mph = doc["current"]["wind_mph"].as<float>();
-    data.wind_degree = doc["current"]["wind_degree"].as<float>();
-    data.wind_dir = doc["current"]["wind_dir"].as<String>();
-    data.pressure_mb = doc["current"]["pressure_mb"].as<float>();
-    data.pressure_in = doc["current"]["pressure_in"].as<float>();
-    data.precip_mm = doc["current"]["precip_mm"].as<float>();
-    data.precip_in = doc["current"]["precip_in"].as<float>();
-    data.humidity = doc["current"]["humidity"].as<float>();
-    data.cloud = doc["current"]["cloud"].as<float>();
-    data.feelslike_c = doc["current"]["feelslike_c"].as<float>();
-    data.feelslike_f = doc["current"]["feelslike_f"].as<float>();
-    data.uv = doc["current"]["uv"].as<float>();
-    // code
-    data.code = doc["current"]["condition"]["code"].as<uint16_t>();
-    data.is_day = doc["current"]["is_day"].as<uint8_t>();
+  // fetch weather condition data from weather API
+  if (fetchUrlData(reqURL, false, jsonBuf, JSON_BUF_SIZE)) {
+    sanitizeJson(jsonBuf);
+    DeserializationError error = deserializeJson(doc, jsonBuf, strlen(jsonBuf));
 
-    log_d("Weather code: %d  Is day: %d", data.code, data.is_day);
-
-    // 3. calculate & update AQI values
-    parseAQI(data.co, data.no2, data.o3, data.so2, data.pm2_5, data.pm10);
-
-    // 4. update weather panel
-
-    // 4.1 udpate AQI pollution widget
-    lv_img_set_src(ui_Info_Image_AQIimage, &us_epa_index_icon[data.usepa_index - 1]); // icon
-    lv_obj_set_style_bg_color(ui_Info_Panel_AQI, lv_color_hex(us_epa_index_colors[data.usepa_index - 1]), LV_PART_MAIN); // widget color
-    // lv_obj_set_style_bg_opa(ui_Info_Panel_AQI, 150, LV_PART_MAIN); // widget transprent
-    lv_label_set_text(ui_Info_Label_AQIlocation, data.state.c_str());
-    lv_label_set_text(ui_Info_Label_AQIvalue, USAQI.c_str());
-    lv_label_set_text(ui_Info_Label_AQIrate, data.name);
-    lv_label_set_text(ui_Info_Label_AQIdominant, dominantPollutant.c_str());
-    String lastupdated = "Last Updated: " + data.last_updated;
-    lv_label_set_text(ui_Info_Label_LastUpdated, lastupdated.c_str());
-
-    // 4.2 udpate weather condition widget
-    bool isNight = (data.is_day == 0);
-    const lv_img_dsc_t *iconImg = getWeatherIconImage(data.code, isNight);
-    const lv_img_dsc_t *homeImg = getHomeIconImage(data.code, isNight, now.month);
-
-    String temp = "";
-    if (temp_unit == 0)
-      temp = String(data.temp_c, 1) + "°c";
-    else
-      temp = String(data.temp_f, 1) + "°F";
-
-    lv_label_set_text(ui_Info_Label_Temp, temp.c_str()); // temp
-    lv_img_set_src(ui_Info_Image_WeatherIcon, iconImg); // icon
-    lv_img_set_src(ui_Info_Image_Home, homeImg); // icon
-
-    String details = "";
-    if (temp_unit == 0) {
-      details = "Feel like : " + String(data.feelslike_c, 1) + "°c" + "\nWind     : " + String(data.wind_kph, 0) + " km/h " + data.wind_dir + "\nHumidity : " + String(data.humidity, 0) + "%" + "\nPressure : " + String(data.pressure_mb, 0) + " mb" + "\nUV Index : " + String(data.uv, 0);
-    } else {
-      details = "Feel like : " + String(data.feelslike_f, 1) + "°F" + "\nWind     : " + String(data.wind_kph, 0) + " m/h " + data.wind_dir + "\nHumidity : " + String(data.humidity, 0) + "%" + "\nPressure : " + String(data.pressure_in, 0) + " in" + "\nUV Index : " + String(data.uv, 0);
+    if (error) {
+      log_e("Weather JSON parse failed: %s", error.c_str());
+      weatherTask = NULL;
+      vTaskDelete(self);
+      return;
     }
-    lv_label_set_text(ui_Info_Label_Detail, details.c_str());
-    setWeatherPanelBgColor(data.code, isNight); // set wallpaper
-  }
 
+    // check of error  {"error":{"code":1006,"message":"No matching location found."}}
+    int errorCode = doc["error"]["code"].as<int>();
+    if (errorCode != 0) { // error occure
+      log_e("Error code: %d %s", errorCode, doc["error"]["message"].as<const char *>());
+      lv_label_set_text(ui_Info_Label_AQIlocation, "No data available");
+      lv_img_set_src(ui_Info_Image_AQIimage, ""); // icon
+      lv_obj_set_style_bg_color(ui_Info_Panel_AQI, lv_color_hex(0x777777), LV_PART_MAIN);
+      lv_label_set_text(ui_Info_Label_AQIrate, "Please try select another city");
+      lv_label_set_text(ui_Info_Label_AQIvalue, "-");
+      lv_label_set_text(ui_Info_Label_AQIdominant, "");
+
+    } else { // dadta available
+
+      Weather_JSON data;
+      // parsing data
+      strncpy(data.last_updated, doc["current"]["last_updated"] | "", sizeof(data.last_updated));
+      strncpy(data.state, doc["location"]["name"] | "", sizeof(data.state));
+      // AQI
+      data.usepa_index = doc["current"]["air_quality"]["us-epa-index"].as<uint8_t>();
+      data.name = us_epa_index_names[data.usepa_index - 1]; // name of aqi level
+      data.co = doc["current"]["air_quality"]["co"].as<float>();
+      data.no2 = doc["current"]["air_quality"]["no2"].as<float>();
+      data.o3 = doc["current"]["air_quality"]["o3"].as<float>();
+      data.so2 = doc["current"]["air_quality"]["so2"].as<float>();
+      data.pm2_5 = doc["current"]["air_quality"]["pm2_5"].as<float>();
+      data.pm10 = doc["current"]["air_quality"]["pm10"].as<float>();
+      // weather condition
+      data.temp_c = doc["current"]["temp_c"].as<float>();
+      data.temp_f = doc["current"]["temp_f"].as<float>();
+      data.wind_kph = doc["current"]["wind_kph"].as<float>();
+      data.wind_mph = doc["current"]["wind_mph"].as<float>();
+      data.wind_degree = doc["current"]["wind_degree"].as<float>();
+
+      strncpy(data.wind_dir, doc["current"]["wind_dir"] | "", sizeof(data.wind_dir));
+      data.pressure_mb = doc["current"]["pressure_mb"].as<float>();
+      data.pressure_in = doc["current"]["pressure_in"].as<float>();
+      data.precip_mm = doc["current"]["precip_mm"].as<float>();
+      data.precip_in = doc["current"]["precip_in"].as<float>();
+      data.humidity = doc["current"]["humidity"].as<float>();
+      data.cloud = doc["current"]["cloud"].as<float>();
+      data.feelslike_c = doc["current"]["feelslike_c"].as<float>();
+      data.feelslike_f = doc["current"]["feelslike_f"].as<float>();
+      data.uv = doc["current"]["uv"].as<float>();
+      // code
+      data.code = doc["current"]["condition"]["code"].as<uint16_t>();
+      data.is_day = doc["current"]["is_day"].as<uint8_t>();
+
+      log_d("Weather code: %d  Is day: %d", data.code, data.is_day);
+
+      // 3. calculate & update AQI values
+      parseAQI(data.co, data.no2, data.o3, data.so2, data.pm2_5, data.pm10);
+
+      // 4. update weather panel
+
+      // 4.1 udpate AQI pollution widget
+      lv_img_set_src(ui_Info_Image_AQIimage, &us_epa_index_icon[data.usepa_index - 1]); // icon
+      lv_obj_set_style_bg_color(ui_Info_Panel_AQI, lv_color_hex(us_epa_index_colors[data.usepa_index - 1]), LV_PART_MAIN); // widget color
+      // lv_obj_set_style_bg_opa(ui_Info_Panel_AQI, 150, LV_PART_MAIN); // widget transprent
+      lv_label_set_text(ui_Info_Label_AQIlocation, data.state);
+      lv_label_set_text(ui_Info_Label_AQIvalue, USAQI);
+      lv_label_set_text(ui_Info_Label_AQIrate, data.name);
+      lv_label_set_text(ui_Info_Label_AQIdominant, dominantPollutant);
+      char lastupdated[64];
+      snprintf(lastupdated, sizeof(lastupdated), "Last Updated: %s", data.last_updated);
+      lv_label_set_text(ui_Info_Label_LastUpdated, lastupdated);
+
+      // 4.2 udpate weather condition widget
+      bool isNight = (data.is_day == 0);
+      const lv_img_dsc_t *iconImg = getWeatherIconImage(data.code, isNight);
+      const lv_img_dsc_t *homeImg = getHomeIconImage(data.code, isNight, now.month);
+
+      char temp[32]; // fixed buffer on stack; zero heap usage
+      if (temp_unit == 0) {
+        snprintf(temp, sizeof(temp), "%.1f°c", data.temp_c);
+      } else {
+        snprintf(temp, sizeof(temp), "%.1f°F", data.temp_f);
+      }
+      lv_label_set_text(ui_Info_Label_Temp, temp);
+
+      lv_img_set_src(ui_Info_Image_WeatherIcon, iconImg); // icon
+      lv_img_set_src(ui_Info_Image_Home, homeImg); // icon
+
+      char details[256]; // adjust size if UI text grows
+
+      if (temp_unit == 0) {
+        // Celsius version
+        snprintf(details, sizeof(details),
+                 "Feel like : %.1f°C\n"
+                 "Wind     : %.0f km/h %s\n"
+                 "Humidity : %.0f%%\n"
+                 "Pressure : %.0f mb\n"
+                 "UV Index : %.0f",
+                 data.feelslike_c, data.wind_kph, data.wind_dir, data.humidity, data.pressure_mb, data.uv);
+      } else {
+        // Fahrenheit version
+        snprintf(details, sizeof(details),
+                 "Feel like : %.1f°F\n"
+                 "Wind     : %.0f m/h %s\n"
+                 "Humidity : %.0f%%\n"
+                 "Pressure : %.2f in\n"
+                 "UV Index : %.0f",
+                 data.feelslike_f, data.wind_kph, data.wind_dir, data.humidity, data.pressure_in, data.uv);
+      }
+
+      lv_label_set_text(ui_Info_Label_Detail, details);
+
+      setWeatherPanelBgColor(data.code, isNight); // set wallpaper
+    }
+  } else {
+    log_e("Failed to fetch weather data from URL");
+  }
   UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
   log_d("{ Task stack remaining MIN: %u bytes }", hwm);
+
   weatherTask = NULL;
-  vTaskDelete(NULL);
+  vTaskDelete(self);
 }
 
 // update weather panel function
@@ -496,8 +528,8 @@ static ui_anim_user_data_t cat_move_ud;
 static ui_anim_user_data_t dog_sprite_ud;
 static ui_anim_user_data_t dog_move_ud;
 
-int last_x_cat = 221;//first cat pos in ui_Screen_Info.c
-int last_x_dog = 179;//first dog pos in ui_Screen_Info.c
+int last_x_cat = 221; // first cat pos in ui_Screen_Info.c
+int last_x_dog = 179; // first dog pos in ui_Screen_Info.c
 int target_x_cat = 0;
 int target_x_dog = 0;
 int travel_time = 0;

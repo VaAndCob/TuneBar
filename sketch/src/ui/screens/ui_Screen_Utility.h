@@ -24,6 +24,7 @@ extern lv_obj_t *ui_Utility_Panel_Torch;
 extern lv_obj_t *ui_Utility_Label_Label26;
 extern lv_obj_t *ui_Utility_Panel_SystemInfo;
 extern lv_obj_t *ui_Utility_Label_Build;
+extern lv_obj_t *ui_Utility_Label_Memory;
 extern lv_obj_t *ui_Utility_Image_qrcode;
 extern void ui_event_Utility_Button_closeConfig2( lv_event_t * e);
 extern lv_obj_t *ui_Utility_Button_closeConfig2;

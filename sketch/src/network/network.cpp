@@ -1,22 +1,20 @@
 #include "network.h"
+#include "esp32-hal.h"
 #include "file/file.h"
 #include "pcf85063/pcf85063.h"
 #include "task_msg/task_msg.h"
 #include "ui/ui.h"
+#include "updater/updater.h"
 #include "weather/weather.h"
-#include "esp32-hal.h"
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <LittleFS.h>
 #include <WiFi.h>
 #include <stdint.h>
+#include <WiFiClientSecure.h>
+//#include <WiFiClient.h>
 
 extern PCF85063 rtc;
-// #define USE_SSL
-
-#ifdef USE_SSL
-#include <WiFiClientSecure.h>
-#endif
 
 #define WIFI_CONNECT_TIMEOUT_MS 5000
 #define WIFI_MAX 10
@@ -47,9 +45,9 @@ int loadWifiList(WifiEntry list[]) {
   File f = LittleFS.open(WIFI_FILE, "r");
   if (!f) return 0;
 
-  JsonDocument doc;
+  JsonDocument doc; 
+  DeserializationError  err = deserializeJson(doc, f);
 
-  DeserializationError err = deserializeJson(doc, f);
   f.close();
 
   if (err) {
@@ -116,7 +114,7 @@ int addOrUpdateWifi(const char *ssid, const char *password, WifiEntry list[], in
 // Discovery wifi network
 
 void scanWiFi(bool updateList) {
-   if (updateList) updateWiFiOption("Scaning..."); // clear wifi dropdown
+  if (updateList) updateWiFiOption("Scaning..."); // clear wifi dropdown
 
   bool isAsync = (WiFi.status() == WL_CONNECTED);
 
@@ -142,31 +140,31 @@ void scanWiFi(bool updateList) {
     }
     networks = (scanResult > 0) ? scanResult : 0;
 
-} else {
+  } else {
     // --- Synchronous (Blocking) Scan ---
     log_d("Preparing for blocking scan...");
     // 1. บังคับปิดและลบข้อมูลสแกนเดิม
-    WiFi.scanDelete(); 
+    WiFi.scanDelete();
     WiFi.disconnect(true); // ปิดการเชื่อมต่อเดิมทั้งหมด
-    WiFi.mode(WIFI_OFF);   // ปิดวิทยุชั่วคราว
+    WiFi.mode(WIFI_OFF); // ปิดวิทยุชั่วคราว
     vTaskDelay(pdMS_TO_TICKS(100));
     // 2. เริ่มต้นระบบ Wi-Fi ใหม่
-    WiFi.mode(WIFI_STA); 
+    WiFi.mode(WIFI_STA);
     vTaskDelay(pdMS_TO_TICKS(200)); // ให้เวลา Driver ตื่นขึ้นมา
     log_d("Scanning for Wi-Fi networks (blocking): ");
     // 3. สั่งสแกน
     int16_t scanResult = WiFi.scanNetworks();
-    
+
     if (scanResult < 0) {
-        log_e("Scan failed with error code: %d", scanResult);
-        // ถ้ายังล้มเหลว ลองสั่ง WiFi.scanDelete() อีกรอบเพื่อ Reset
-        WiFi.scanDelete();
-        networks = 0;
+      log_e("Scan failed with error code: %d", scanResult);
+      // ถ้ายังล้มเหลว ลองสั่ง WiFi.scanDelete() อีกรอบเพื่อ Reset
+      WiFi.scanDelete();
+      networks = 0;
     } else {
-        networks = (uint8_t)scanResult;
-        log_d("%d networks found", networks);
+      networks = (uint8_t)scanResult;
+      log_d("%d networks found", networks);
     }
-}
+  }
   // --- Process and Display Results (common part) ---
 
   String SSIDs = "";
@@ -187,7 +185,7 @@ void scanWiFi(bool updateList) {
 }
 
 //-----------------------------------------
-//check connection status and attemp to connect every 30 second
+// check connection status and attemp to connect every 30 second
 void wifi_connect_task(void *param) {
 
   for (;;) {
@@ -261,7 +259,11 @@ void wifi_connect_task(void *param) {
               // audioPlayFS(1, "/audio/ding.mp3");
               rtc.ntp_sync(UTC_offset_hour[offset_hour_index], UTC_offset_minute[offset_minute_index]);
               rtc.calibratBySeconds(0, 0.0); // mode 0 (eery 2 second, diff_time/total_calibrate_time)
-              updateWeatherPanel();//update weather condition once after internet connected
+              updateWeatherPanel(); // update weather condition once after internet connected
+              if (!firmware_checked && newFirmwareAvailable()) {
+             
+              }
+           
             } else {
               log_w("Wrong Wi-Fi password or timeout for %s", networkName.c_str());
               updateWiFiStatus("Wrong Wi-Fi password or timeout", 0xFF0000, 0x777777);
@@ -269,70 +271,116 @@ void wifi_connect_task(void *param) {
           } // for each match
         } // If we
       }
-    } //wifi connected
-     UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
+    } // wifi connected
+    UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
     log_d("{ Task stack remaining MIN: %u bytes }", hwm);
     vTaskDelay(pdMS_TO_TICKS(30000));
-
   }
 }
 
 void wifiConnect() {
-  if (wifiTask == NULL) xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 4 * 1024, NULL, 1, &wifiTask, 0);
+  if (wifiTask == NULL) xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 8 * 1024, NULL, 1, &wifiTask, 0);
 }
 
-// -------------  Function to fetch data -------------------
-String fetchUrlData(const char *url) {
-  String payload = "";
-#ifdef USE_SSL
-  WiFiClientSecure client;
-  client.setInsecure(); // Disable certificate validation
-#else
-  WiFiClient client;
-#endif
 
-  if (WiFi.status() != WL_CONNECTED) {
-    log_e("WiFi not connected. Cannot fetch data.");
-    return "";
-  }
-
-  log_d("Fetching URL: %s", url);
-  HTTPClient http;
-#ifdef USE_SSL
-  http.begin(client, url);
-#else
-  http.begin(url);
-#endif
-
-  // http.begin(client, url);
-  http.begin(url);
-  int httpResponseCode = http.GET();
-
-  if (httpResponseCode > 0) {
-    // Handle potential redirection
-    if (httpResponseCode == HTTP_CODE_MOVED_PERMANENTLY || httpResponseCode == HTTP_CODE_FOUND) {
-      String newUrl = http.header("Location");
-      http.end(); // End the current connection before starting a new one
-#ifdef USE_SSL
-      http.begin(client, newUrl.c_str()); // Begin new request with the new URL
-#else
-      http.begin(newUrl.c_str()); // Begin new request with the new URL
-#endif
-
-      httpResponseCode = http.GET(); // Send the GET request to the new URL
-      if (httpResponseCode > 0) {
-        payload = http.getString(); // Get payload from redirected URL
-      } else {
-        log_e("[HTTP] GET failed, error: %s", http.errorToString(httpResponseCode).c_str());
-      }
-    } else {
-      payload = http.getString(); // Get payload from original URL
+// sanitze JSON data by removing BOM and extraneous characters
+void sanitizeJson(char *buf) {
+    // 1) strip BOM if present
+    if ((uint8_t)buf[0] == 0xEF && (uint8_t)buf[1] == 0xBB && (uint8_t)buf[2] == 0xBF) {
+        memmove(buf, buf + 3, strlen(buf) - 2);
     }
-  } else {
-    log_e("[HTTP] GET failed, error: %s", http.errorToString(httpResponseCode).c_str());
-  }
-  http.end();
+    // 2) remove leading garbage before first '{' or '['
+    char *start = buf;
+    while (*start && *start != '{' && *start != '[') start++;
 
-  log_d("Payload: %s", payload.c_str());
-  return payload;
+    if (start != buf)
+        memmove(buf, start, strlen(start) + 1);
+    // 3) truncate after last '}' or ']'
+    char *endBrace = strrchr(buf, '}');
+    char *endBracket = strrchr(buf, ']');
+    char *end = endBrace;
+    if (endBracket && endBracket > end) end = endBracket;
+    if (end) *(end + 1) = '\0';
+}
+// -------------  Function to fetch data -------------------
+bool fetchUrlData(const char *url, bool ssl, char *outBuf, size_t outBufSize) {
+
+    if (WiFi.status() != WL_CONNECTED) return false;
+
+    HTTPClient http;
+    WiFiClient client;
+    WiFiClientSecure clientSecure;
+
+    if (ssl) {
+        clientSecure.setInsecure();
+        http.begin(clientSecure, url);
+    } else {
+        http.begin(client, url);
+    }
+
+    int code = http.GET();
+    if (code <= 0) {
+        http.end();
+        return false;
+    }
+
+    WiFiClient *stream = http.getStreamPtr();
+    size_t idx = 0;
+
+    const uint32_t timeout = millis() + 8000;
+
+    while (millis() < timeout && idx < outBufSize - 1) {
+        if (!stream->available()) {
+            delay(1);
+            continue;
+        }
+        int c = stream->read();
+        if (c < 0) continue;
+        outBuf[idx++] = (char)c;
+    }
+    outBuf[idx] = '\0';
+    log_d("Fetched %u bytes\n %s", idx, outBuf);
+    http.end();
+    return (idx > 0);
+}
+//----------------------------------------------
+// memory and system info
+void memoryInfo(char *buf, size_t len) {
+    size_t ifree = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    size_t imin  = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
+    size_t ilarge = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+
+    size_t pfree = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    size_t pmin  = heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM);
+    size_t plarge = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+
+    snprintf(buf, len,
+             "Memory : Free / Min / Largest (bytes)\n"
+             "IRAM : %u / %u / %u\n"
+             "PSRAM: %u / %u / %u",
+             (unsigned)ifree, (unsigned)imin, (unsigned)ilarge,
+             (unsigned)pfree, (unsigned)pmin, (unsigned)plarge);
+      log_d("%s", buf);
+}
+
+void systemInfo(char *buf, size_t len) {
+  size_t used  = LittleFS.usedBytes();
+  size_t total = LittleFS.totalBytes();
+  float pct_free = (float)(total - used) * 100.0f / (float)total;
+  uint64_t mac = ESP.getEfuseMac();
+  snprintf(
+        buf,
+        len,
+        "[ TuneBar by Va&Cob ]\n"
+        "BUILD  : %s - %s\n"
+        "SERIAL : %012" PRIx64 "\n"
+        "STORAGE : %u / %u KB (%.1f %% free)",
+        current_version,
+        compile_date,
+        mac,
+        (unsigned)(used / 1024),
+        (unsigned)(total / 1024),
+        pct_free
+    );
+  log_d("%s", buf);
 }

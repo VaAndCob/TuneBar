@@ -5,24 +5,22 @@
 Preferences pref;
 #include "network/network.h"
 
-//#include "record.h"
+// #include "record.h"
 #include "file/file.h"
 #include "lcd_bl_bsp/lcd_bl_pwm_bsp.h"
 #include "pcf85063/pcf85063.h"
 #include "task_msg/task_msg.h"
+#include "updater/updater.h"
 #include "weather/weather.h"
 #include <LittleFS.h>
 
-#include "es7210/es7210.h"
 #include "ESP32-audioI2S-master/Audio.h"
+#include "es7210/es7210.h"
 extern Audio audio;
 uint8_t audio_volume = 10;
 extern ES7210 mic;
 
 PCF85063 rtc;
-// global variable
-const String compile_date = __DATE__ " - " __TIME__; // get built date and time
-const String version = "1.1.0";
 
 uint8_t timeout_index = 0; // backlight timeout index
 bool paused = false;
@@ -48,14 +46,7 @@ void delete_screen_logo(lv_timer_t *timer) {
   lv_scr_load_anim(ui_Screen_MainMenu, LV_SCR_LOAD_ANIM_FADE_IN, 500, 0, true); // delete old screen
 
   // init widgets
-  size_t used  = LittleFS.usedBytes();
-  size_t total = LittleFS.totalBytes();
-  float pct_free = (total - used) * 100.0 / total;
 
-  String txt = "TuneBar by Va&Cob\nBUILD  : " + version + " - " + compile_date + "\nSERIAL : " + String(ESP.getEfuseMac()) + 
-  "\nSTORAGE : " + String(used/1024) + " / " + String(total/1024) + " KB (" + String(pct_free, 1) + " % free)";
-  log_i("%s", txt.c_str());
-  lv_label_set_text(ui_Utility_Label_Build, txt.c_str());
   lv_label_set_text(ui_Player_Label_Label1, LV_SYMBOL_VOLUME_MAX);
   lv_label_set_text(ui_Player_Label_Label2, LV_SYMBOL_VOLUME_MID);
   lv_label_set_text(ui_Player_Label_Label4, LV_SYMBOL_NEXT);
@@ -109,24 +100,27 @@ void delete_screen_logo(lv_timer_t *timer) {
   setWallpaper(NULL);
 
   // weater and clock
-  // query type
-  query_parameter = pref.getString("query_parameter", "auto:ip");
-  if (query_parameter == "auto:ip") {
+  size_t len = pref.getBytesLength("query_parameter");
+  pref.getBytes("query_parameter", query_parameter, len);
+  log_d("Region load: Query parameter: %s", query_parameter);
+  if (strcmp(query_parameter, "auto:ip") == 0) {// audo:ip
     lv_obj_add_state(ui_MainMenu_Checkbox_AutoIP, LV_STATE_CHECKED);
     lv_obj_add_flag(ui_MainMenu_Textarea_Latitude, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(ui_MainMenu_Textarea_Longitude, LV_OBJ_FLAG_HIDDEN);
-  } else { // 12.9203,100.212232
-    int commaIndex = query_parameter.indexOf(',');
-    if (commaIndex != -1) { // data available
+  } else { // lat,long
+    char *comma = strchr(query_parameter, ',');
+    if (comma != NULL) {
+      *comma = '\0'; // split in-place → replaces ',' with '\0'
+      const char *lat = query_parameter;
+      const char *lon = comma + 1;
       lv_obj_clear_state(ui_MainMenu_Checkbox_AutoIP, LV_STATE_CHECKED);
-      String lat = query_parameter.substring(0, commaIndex);
-      String lon = query_parameter.substring(commaIndex + 1);
-      lv_textarea_set_text(ui_MainMenu_Textarea_Latitude, lat.c_str());
-      lv_textarea_set_text(ui_MainMenu_Textarea_Longitude, lon.c_str());
+      lv_textarea_set_text(ui_MainMenu_Textarea_Latitude, lat);
+      lv_textarea_set_text(ui_MainMenu_Textarea_Longitude, lon);
       lv_obj_clear_flag(ui_MainMenu_Textarea_Latitude, LV_OBJ_FLAG_HIDDEN);
       lv_obj_clear_flag(ui_MainMenu_Textarea_Longitude, LV_OBJ_FLAG_HIDDEN);
     }
   }
+
   // utc timezone offset
   offset_hour_index = pref.getUChar("offset_hour", 14); // 0 offset
   lv_roller_set_selected(ui_MainMenu_Roller_Hour, offset_hour_index, LV_ANIM_OFF); // set index
@@ -139,7 +133,6 @@ void delete_screen_logo(lv_timer_t *timer) {
 
   SCREEN_OFF_TIMER = millis(); // reset timer
   wifiConnect();
-
 }
 
 // ################# App start here after screen initialized ##############################
@@ -301,9 +294,9 @@ void playseek(lv_event_t *e) {
 // when user press on slider knob.
 void SeekingNow(lv_event_t *e) {
   SCREEN_OFF_TIMER = millis(); // reset backlight timer
-   if (mediaType == 1) {
-  seeking_now = true; // skip slider knob position update during playing
-   }
+  if (mediaType == 1) {
+    seeking_now = true; // skip slider knob position update during playing
+  }
 }
 
 // Play / Pause
@@ -346,22 +339,19 @@ void playpause(lv_event_t *e) {
       lv_textarea_set_text(ui_Player_Textarea_status, "Listenning...");
       audioStopSong();
 
-      
-     
       int32_t dummy[1024] = {0};
       size_t n;
       auto txh = audio.getTxHandle();
-      i2s_channel_write(txh , dummy, sizeof(dummy), &n, 100);
-  
-    // ปลุกชิป ES7210
-     if (!mic.start()) {
-      log_e("ES7210 not detected");
-      return;
-    }
-   delay(100);
+      i2s_channel_write(txh, dummy, sizeof(dummy), &n, 100);
+
+      // ปลุกชิป ES7210
+      if (!mic.start()) {
+        log_e("ES7210 not detected");
+        return;
+      }
+      delay(100);
       log_i("Recording Started at 48k");
-    is_mic_mode = true;
-  
+      is_mic_mode = true;
 
       break; // Cleaned up: only one break needed
     }
@@ -655,7 +645,7 @@ void chatBotMode(lv_event_t *e) {
     lv_obj_set_style_radius(ui_Player_Button_play, 25, LV_PART_MAIN);
     lv_textarea_set_text(ui_Player_Textarea_status, "");
     audioStopSong();
-    //audioPlayFS(1, "/audio/ai_not_support.mp3");
+    // audioPlayFS(1, "/audio/ai_not_support.mp3");
   }
   mediaType = 2;
   lv_anim_del(NULL, (lv_anim_exec_xcb_t)_ui_anim_callback_set_image_zoom);
@@ -676,8 +666,8 @@ void informationMode(lv_event_t *e) {
   }
 }
 // Utility Mode event
-void utilityMode(lv_event_t * e) {
-
+void utilityMode(lv_event_t *e) {
+  // performOnlineUpdate();
 }
 
 //--------------- CONFIGURATION  Menu ----------------------
@@ -689,14 +679,14 @@ void saveConfig(lv_event_t *e) {
   pref.putUChar("wallpaper", wallpaperIndex);
   // Region
   if (lv_obj_has_state(ui_MainMenu_Checkbox_AutoIP, LV_STATE_CHECKED)) {
-    query_parameter = "auto:ip"; // auto detect
+    strcpy(query_parameter, "auto:ip");
   } else { // merge lat long into  lag,long
     const char *lat = lv_textarea_get_text(ui_MainMenu_Textarea_Latitude);
     const char *lon = lv_textarea_get_text(ui_MainMenu_Textarea_Longitude);
-    query_parameter = String(lat) + "," + String(lon);
+    snprintf(query_parameter, sizeof(query_parameter), "%s,%s", lat, lon);
   }
-  log_d("Region: query_parameter = %s", query_parameter.c_str());
-  pref.putString("query_parameter", query_parameter);
+  log_d("Region saved: query_parameter = %s", query_parameter);
+  pref.putBytes("query_parameter", query_parameter, strlen(query_parameter) + 1);
   //---------
   pref.putUChar("offset_hour", offset_hour_index);
   pref.putUChar("offset_minute", offset_minute_index);
@@ -834,7 +824,7 @@ void updateAQIwidget(lv_event_t *e) {
 }
 // set query paramter to auto detect IP address
 void set_query_para_autoip(lv_event_t *e) {
-  query_parameter = "autoip";
+  strcpy(query_parameter, "auto:ip");
   SCREEN_OFF_TIMER = millis(); // reset timer
 }
 // number pad
@@ -869,11 +859,23 @@ void setTempUnit(lv_event_t *e) {
 }
 
 // Utility -----------------------
-void torch_ON(lv_event_t * e) {
-setUpduty(LCD_PWM_MODE_255);
- BL_OFF = true; // auto backlight on
+void torch_ON(lv_event_t *e) {
+  setUpduty(LCD_PWM_MODE_255);
+  BL_OFF = true; // auto backlight on
 }
-void torch_OFF(lv_event_t * e) {
-BL_OFF = false;
- setBrightness(NULL);
+void torch_OFF(lv_event_t *e) {
+  BL_OFF = false;
+  setBrightness(NULL);
+}
+void showSystemInfo(lv_event_t *e) {
+  SCREEN_OFF_TIMER = millis(); // reset timer
+  // system info
+  static char infoText[160];
+  systemInfo(infoText, sizeof(infoText));
+  lv_label_set_text(ui_Utility_Label_Build, infoText);
+
+  // memory info
+  static char memText[160];
+  memoryInfo(memText, sizeof(memText));
+  lv_label_set_text(ui_Utility_Label_Memory, memText);
 }

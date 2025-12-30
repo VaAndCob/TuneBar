@@ -266,7 +266,8 @@ String getTrackPath(int index) {
 
 // The dedicated SD Scan Task
 void scan_music_task(void *pvParameters) {
-
+   TaskHandle_t self = scanMusicTask;
+   
   if (!SD.begin(SD_CS, SPI)) {
     log_w("X Card Mount Failed");
     updateSDCARDStatus(LV_SYMBOL_CLOSE " Card Mount Failed",0x777777);
@@ -286,7 +287,7 @@ void scan_music_task(void *pvParameters) {
   log_d("{ Task stack remaining MIN: %u bytes }", hwm);
   }
   scanMusicTask = NULL;
-  vTaskDelete(NULL);
+  vTaskDelete(self);
 }
 
 void scanMusic() {

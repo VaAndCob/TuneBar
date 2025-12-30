@@ -19,8 +19,9 @@ uint8_t audio_volume = 10;
 
 PCF85063 rtc;
 // global variable
-const String compile_date = __DATE__ " - " __TIME__; // get built date and time
-const String version = "1.0.0";
+constexpr const char* compile_date = __DATE__ " - " __TIME__;
+constexpr const char* version      = "1.0.0";
+
 
 uint8_t timeout_index = 0; // backlight timeout index
 bool paused = false;

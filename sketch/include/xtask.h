@@ -21,6 +21,7 @@ xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 
 #include <LittleFS.h>
 
 //==============================================
+/*
 // Memory Check Function
 void memory_info() {
   size_t freeHeap = ESP.getFreeHeap();
@@ -36,7 +37,7 @@ void memory_info() {
     log_i("PSRAM: Not found");
   }
 }
-
+*/
 //==============================================
 // BUTTON INPUT TASK:
 void button_input_task(void *param) {
@@ -351,11 +352,12 @@ void my_audio_info(Audio::msg_t m) {
   case 0: // show station title / description
   {
     if (m.e == Audio::evt_streamtitle) {
-      String txt = stations[stationIndex].name + "\n" + String(m.msg);
+      char txt[256];   // pick a big enough buffer
+      snprintf(txt,sizeof(txt),"%s\n%s",stations[stationIndex].name, m.msg);
       msg = {
           .type = STATUS_UPDATE_TRACK_DESC_SET,
       };
-      strncpy(msg.trackDesc, txt.c_str(), sizeof(msg.trackDesc) - 1);
+      strncpy(msg.trackDesc, txt, sizeof(msg.trackDesc) - 1);
       msg.trackDesc[sizeof(msg.trackDesc) - 1] = '\0';
       xQueueSend(ui_status_queue, &msg, 100); // send message
       log_i("%s", msg.trackDesc);
@@ -366,11 +368,12 @@ void my_audio_info(Audio::msg_t m) {
   {
     if (m.e == Audio::evt_id3data) {
       if (strstr(m.msg, "Title") || strstr(m.msg, "Artist") || strstr(m.msg, "Album")) {
-        String txt = String(m.msg) + "\n";
+        char txt[256];   // pick a big enough buffer
+        snprintf(txt,sizeof(txt),"%s\n", m.msg);
         msg = {
             .type = STATUS_UPDATE_TRACK_DESC_ADD,
         };
-        strncpy(msg.trackDesc, txt.c_str(), sizeof(msg.trackDesc) - 1);
+        strncpy(msg.trackDesc, txt, sizeof(msg.trackDesc) - 1);
         msg.trackDesc[sizeof(msg.trackDesc) - 1] = '\0';
         xQueueSend(ui_status_queue, &msg, 100); // send message
         log_i("%s", msg.trackDesc);
@@ -473,11 +476,11 @@ void audio_loop_task(void *param) {
               xQueueSend(ui_status_queue, &msg, 100); // send message
 
               // play track
-              String trackpath = getTrackPath(trackIndex);
+              const char *trackpath = getTrackPath(trackIndex).c_str();
               msg = {
                   .type = STATUS_UPDATE_TRACK_DESC_SET,
               };
-              if (!audio.connecttoFS(SD, trackpath.c_str())) {
+              if (!audio.connecttoFS(SD, trackpath)) {
                 log_e("Failed to open file: %s", trackpath);
                 strncpy(msg.trackDesc, "Cannot access music.\nPlease check the SD Card.\nOr Update music library.", sizeof(msg.trackDesc) - 1);
               } else {

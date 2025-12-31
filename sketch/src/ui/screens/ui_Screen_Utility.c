@@ -5,7 +5,7 @@
 
 #include "../ui.h"
 
-lv_obj_t *ui_Screen_Utility = NULL;lv_obj_t *ui_Utility_Image_TorchButton = NULL;lv_obj_t *ui_Utility_Image_SystemInfoButton = NULL;lv_obj_t *ui_Utility_Panel_Torch = NULL;lv_obj_t *ui_Utility_Label_Label26 = NULL;lv_obj_t *ui_Utility_Panel_SystemInfo = NULL;lv_obj_t *ui_Utility_Label_Build = NULL;lv_obj_t *ui_Utility_Label_Memory = NULL;lv_obj_t *ui_Utility_Image_qrcode = NULL;lv_obj_t *ui_Utility_Button_closeConfig2 = NULL;lv_obj_t *ui_Utility_Label_Label28 = NULL;lv_obj_t *ui_Utility_Button_returnMenu = NULL;lv_obj_t *ui_Utility_Label_Label27 = NULL;lv_obj_t *ui_Utility_Panel_blindPanel = NULL;
+lv_obj_t *ui_Screen_Utility = NULL;lv_obj_t *ui_Utility_Image_TorchButton = NULL;lv_obj_t *ui_Utility_Image_SystemInfoButton = NULL;lv_obj_t *ui_Utility_Panel_Torch = NULL;lv_obj_t *ui_Utility_Label_Label26 = NULL;lv_obj_t *ui_Utility_Panel_SystemInfo = NULL;lv_obj_t *ui_Utility_Label_Build = NULL;lv_obj_t *ui_Utility_Label_Memory = NULL;lv_obj_t *ui_Utility_Image_qrcode = NULL;lv_obj_t *ui_Utility_Button_closeConfig2 = NULL;lv_obj_t *ui_Utility_Label_Label28 = NULL;lv_obj_t *ui_Utility_Button_UpdateFirmware = NULL;lv_obj_t *ui_Utility_Label_Label11 = NULL;lv_obj_t *ui_Utility_Button_returnMenu = NULL;lv_obj_t *ui_Utility_Label_Label27 = NULL;lv_obj_t *ui_Utility_Panel_blindPanel = NULL;
 // event funtions
 void ui_event_Screen_Utility( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -25,6 +25,11 @@ void ui_event_Utility_Image_TorchButton( lv_event_t * e) {
 if ( event_code == LV_EVENT_CLICKED) {
       _ui_flag_modify( ui_Utility_Panel_Torch, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_REMOVE);
       torch_ON( e );
+      _ui_flag_modify( ui_Utility_Button_returnMenu, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
+}
+if ( event_code == LV_EVENT_GESTURE &&  lv_indev_get_gesture_dir(lv_indev_get_act()) == LV_DIR_BOTTOM  ) {
+lv_indev_wait_release(lv_indev_get_act());
+      _ui_screen_change( &ui_Screen_MainMenu, LV_SCR_LOAD_ANIM_MOVE_BOTTOM, 500, 0, &ui_Screen_MainMenu_screen_init);
 }
 }
 
@@ -34,6 +39,11 @@ void ui_event_Utility_Image_SystemInfoButton( lv_event_t * e) {
 if ( event_code == LV_EVENT_CLICKED) {
       _ui_flag_modify( ui_Utility_Panel_SystemInfo, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_REMOVE);
       showSystemInfo( e );
+      _ui_flag_modify( ui_Utility_Button_returnMenu, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
+}
+if ( event_code == LV_EVENT_GESTURE &&  lv_indev_get_gesture_dir(lv_indev_get_act()) == LV_DIR_BOTTOM  ) {
+lv_indev_wait_release(lv_indev_get_act());
+      _ui_screen_change( &ui_Screen_MainMenu, LV_SCR_LOAD_ANIM_MOVE_BOTTOM, 500, 0, &ui_Screen_MainMenu_screen_init);
 }
 }
 
@@ -51,6 +61,14 @@ void ui_event_Utility_Button_closeConfig2( lv_event_t * e) {
 
 if ( event_code == LV_EVENT_CLICKED) {
       _ui_flag_modify( ui_Utility_Panel_SystemInfo, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
+}
+}
+
+void ui_event_Utility_Button_UpdateFirmware( lv_event_t * e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+if ( event_code == LV_EVENT_CLICKED) {
+      ota_update( e );
 }
 }
 
@@ -90,6 +108,7 @@ ui_Screen_Utility = lv_obj_create(NULL);
 lv_obj_clear_flag( ui_Screen_Utility, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 lv_obj_set_style_bg_color(ui_Screen_Utility, lv_color_hex(0x333333), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_bg_opa(ui_Screen_Utility, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_bg_grad_dir(ui_Screen_Utility, LV_GRAD_DIR_VER, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_font(ui_Screen_Utility, &lv_font_montserrat_28, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_Utility_Image_TorchButton = lv_img_create(ui_Screen_Utility);
@@ -201,6 +220,36 @@ lv_obj_set_align( ui_Utility_Label_Label28, LV_ALIGN_CENTER );
 lv_label_set_text(ui_Utility_Label_Label28,"X");
 lv_obj_set_style_text_font(ui_Utility_Label_Label28, &lv_font_montserrat_32, LV_PART_MAIN| LV_STATE_DEFAULT);
 
+ui_Utility_Button_UpdateFirmware = lv_btn_create(ui_Utility_Panel_SystemInfo);
+lv_obj_set_width( ui_Utility_Button_UpdateFirmware, 100);
+lv_obj_set_height( ui_Utility_Button_UpdateFirmware, 80);
+lv_obj_set_x( ui_Utility_Button_UpdateFirmware, 99 );
+lv_obj_set_y( ui_Utility_Button_UpdateFirmware, -43 );
+lv_obj_set_align( ui_Utility_Button_UpdateFirmware, LV_ALIGN_CENTER );
+lv_obj_add_flag( ui_Utility_Button_UpdateFirmware, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_SCROLL_ON_FOCUS );   /// Flags
+lv_obj_clear_flag( ui_Utility_Button_UpdateFirmware, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
+lv_obj_set_style_radius(ui_Utility_Button_UpdateFirmware, 15, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_bg_color(ui_Utility_Button_UpdateFirmware, lv_color_hex(0x72F1FC), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_bg_opa(ui_Utility_Button_UpdateFirmware, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_bg_grad_color(ui_Utility_Button_UpdateFirmware, lv_color_hex(0x3A7C81), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_bg_grad_dir(ui_Utility_Button_UpdateFirmware, LV_GRAD_DIR_VER, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_border_color(ui_Utility_Button_UpdateFirmware, lv_color_hex(0xFC0505), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_border_opa(ui_Utility_Button_UpdateFirmware, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_border_width(ui_Utility_Button_UpdateFirmware, 4, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_border_side(ui_Utility_Button_UpdateFirmware, LV_BORDER_SIDE_FULL, LV_PART_MAIN| LV_STATE_DEFAULT);
+
+ui_Utility_Label_Label11 = lv_label_create(ui_Utility_Button_UpdateFirmware);
+lv_obj_set_width( ui_Utility_Label_Label11, LV_SIZE_CONTENT);  /// 1
+lv_obj_set_height( ui_Utility_Label_Label11, LV_SIZE_CONTENT);   /// 1
+lv_obj_set_align( ui_Utility_Label_Label11, LV_ALIGN_CENTER );
+lv_label_set_text(ui_Utility_Label_Label11,"Update\nVersion");
+lv_obj_set_style_text_color(ui_Utility_Label_Label11, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_text_opa(ui_Utility_Label_Label11, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_letter_space(ui_Utility_Label_Label11, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_line_space(ui_Utility_Label_Label11, 5, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_align(ui_Utility_Label_Label11, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_font(ui_Utility_Label_Label11, &lv_font_montserrat_16, LV_PART_MAIN| LV_STATE_DEFAULT);
+
 ui_Utility_Button_returnMenu = lv_btn_create(ui_Screen_Utility);
 lv_obj_set_width( ui_Utility_Button_returnMenu, 100);
 lv_obj_set_height( ui_Utility_Button_returnMenu, 40);
@@ -242,6 +291,7 @@ lv_obj_add_event_cb(ui_Utility_Image_TorchButton, ui_event_Utility_Image_TorchBu
 lv_obj_add_event_cb(ui_Utility_Image_SystemInfoButton, ui_event_Utility_Image_SystemInfoButton, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_Utility_Panel_Torch, ui_event_Utility_Panel_Torch, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_Utility_Button_closeConfig2, ui_event_Utility_Button_closeConfig2, LV_EVENT_ALL, NULL);
+lv_obj_add_event_cb(ui_Utility_Button_UpdateFirmware, ui_event_Utility_Button_UpdateFirmware, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_Utility_Label_Label27, ui_event_Utility_Label_Label27, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_Utility_Button_returnMenu, ui_event_Utility_Button_returnMenu, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_Utility_Panel_blindPanel, ui_event_Utility_Panel_blindPanel, LV_EVENT_ALL, NULL);
@@ -265,6 +315,8 @@ ui_Utility_Label_Memory= NULL;
 ui_Utility_Image_qrcode= NULL;
 ui_Utility_Button_closeConfig2= NULL;
 ui_Utility_Label_Label28= NULL;
+ui_Utility_Button_UpdateFirmware= NULL;
+ui_Utility_Label_Label11= NULL;
 ui_Utility_Button_returnMenu= NULL;
 ui_Utility_Label_Label27= NULL;
 ui_Utility_Panel_blindPanel= NULL;

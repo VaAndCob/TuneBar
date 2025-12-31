@@ -878,3 +878,8 @@ void showSystemInfo(lv_event_t *e) {
   memoryInfo(memText, sizeof(memText));
   lv_label_set_text(ui_Utility_Label_Memory, memText);
 }
+
+void ota_update(lv_event_t *e) {
+  SCREEN_OFF_TIMER = millis(); // reset timer
+   ota_show_popup();
+}

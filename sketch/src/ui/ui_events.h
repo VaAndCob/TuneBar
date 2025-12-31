@@ -52,6 +52,7 @@ void nexttrack(lv_event_t * e);
 void torch_ON(lv_event_t * e);
 void showSystemInfo(lv_event_t * e);
 void torch_OFF(lv_event_t * e);
+void ota_update(lv_event_t * e);
 
 #ifdef __cplusplus
 } /*extern "C"*/

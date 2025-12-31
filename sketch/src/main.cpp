@@ -24,6 +24,9 @@
  * This documentation block provides an authoritative configuration reference
  * to ensure alignment across development, testing, and system integration workflows.
  */
+#include "esp_heap_caps.h"
+#include "mbedtls/platform.h"
+
 
 #include "i2c_bsp/i2c_bsp.h"
 #include "lcd_bl_bsp/lcd_bl_pwm_bsp.h"

@@ -10,9 +10,9 @@
 #include <HTTPClient.h>
 #include <LittleFS.h>
 #include <WiFi.h>
-#include <stdint.h>
 #include <WiFiClientSecure.h>
-//#include <WiFiClient.h>
+#include <stdint.h>
+
 
 extern PCF85063 rtc;
 
@@ -24,6 +24,21 @@ WifiEntry wifiList[WIFI_MAX];
 
 byte networks = 0;
 static TaskHandle_t wifiTask = NULL;
+
+//-----------------------------------------------------------
+// Enable mbedTLS to use PSRAM for dynamic memory allocation instead of internal RAM
+// due to limited internal RAM size on ESP32 must larger than 40kb for TLS operation
+static void *psram_calloc(size_t n, size_t size) {
+  return heap_caps_calloc(n, size, MALLOC_CAP_SPIRAM);
+}
+
+static void psram_free(void *ptr) {
+  heap_caps_free(ptr);
+}
+
+void enableTlsInPsram() {
+  mbedtls_platform_set_calloc_free(psram_calloc, psram_free);
+}
 
 // ---------------------- LOAD WIFI LIST ----------------------
 int loadWifiList(WifiEntry list[]) {
@@ -45,8 +60,8 @@ int loadWifiList(WifiEntry list[]) {
   File f = LittleFS.open(WIFI_FILE, "r");
   if (!f) return 0;
 
-  JsonDocument doc; 
-  DeserializationError  err = deserializeJson(doc, f);
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, f);
 
   f.close();
 
@@ -260,11 +275,35 @@ void wifi_connect_task(void *param) {
               rtc.ntp_sync(UTC_offset_hour[offset_hour_index], UTC_offset_minute[offset_minute_index]);
               rtc.calibratBySeconds(0, 0.0); // mode 0 (eery 2 second, diff_time/total_calibrate_time)
               updateWeatherPanel(); // update weather condition once after internet connected
-              if (!firmware_checked && newFirmwareAvailable()) {
-             
-              }
-           
-            } else {
+              if (!firmware_checked) { // check if new firmware availabe
+                const char *latestVer = newFirmwareAvailable();
+                if (latestVer != NULL) {
+                  char title[48];
+                  snprintf(title, sizeof(title), LV_SYMBOL_REFRESH " New Update Available %s", latestVer);
+                  // notify user about new firmware available
+                  char *title_copy = strdup(title);
+                  lv_async_call(
+                      [](void *p) {
+                        const char *t = (const char *)p;
+                        lv_obj_t *msgBox = lv_msgbox_create(NULL, t, "To update firmware, please click\nUtilities -> System Information", NULL, true);
+                        lv_obj_set_width(msgBox, 420);
+                        lv_obj_set_style_bg_opa(msgBox, LV_OPA_90, LV_PART_MAIN);
+                        lv_obj_center(msgBox);
+                        lv_obj_t *titleObj = lv_msgbox_get_title(msgBox);
+                        lv_obj_t *textObj = lv_msgbox_get_text(msgBox);
+                        lv_obj_t *closeBtn = lv_msgbox_get_close_btn(msgBox);
+                        lv_obj_set_style_text_font(titleObj, &lv_font_montserrat_18, LV_PART_MAIN);
+                        lv_obj_set_style_text_font(textObj, &lv_font_montserrat_18, LV_PART_MAIN);
+                        lv_obj_set_size(closeBtn, 48, 48);
+                        lv_obj_set_style_text_font(closeBtn, &lv_font_montserrat_28, LV_PART_MAIN);
+                        lv_obj_clear_flag(ui_Utility_Button_UpdateFirmware, LV_OBJ_FLAG_HIDDEN); // show update button
+                        free((void *)t); // free heap copy
+                      },
+                      title_copy);
+                } // newfirmwareAvailable
+              } // firmware checked
+
+            } else { // Wifi not connected
               log_w("Wrong Wi-Fi password or timeout for %s", networkName.c_str());
               updateWiFiStatus("Wrong Wi-Fi password or timeout", 0xFF0000, 0x777777);
             }
@@ -279,68 +318,67 @@ void wifi_connect_task(void *param) {
 }
 
 void wifiConnect() {
+  enableTlsInPsram();
   if (wifiTask == NULL) xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 8 * 1024, NULL, 1, &wifiTask, 0);
 }
 
-
 // sanitze JSON data by removing BOM and extraneous characters
 void sanitizeJson(char *buf) {
-    // 1) strip BOM if present
-    if ((uint8_t)buf[0] == 0xEF && (uint8_t)buf[1] == 0xBB && (uint8_t)buf[2] == 0xBF) {
-        memmove(buf, buf + 3, strlen(buf) - 2);
-    }
-    // 2) remove leading garbage before first '{' or '['
-    char *start = buf;
-    while (*start && *start != '{' && *start != '[') start++;
+  // 1) strip BOM if present
+  if ((uint8_t)buf[0] == 0xEF && (uint8_t)buf[1] == 0xBB && (uint8_t)buf[2] == 0xBF) {
+    memmove(buf, buf + 3, strlen(buf) - 2);
+  }
+  // 2) remove leading garbage before first '{' or '['
+  char *start = buf;
+  while (*start && *start != '{' && *start != '[') start++;
 
-    if (start != buf)
-        memmove(buf, start, strlen(start) + 1);
-    // 3) truncate after last '}' or ']'
-    char *endBrace = strrchr(buf, '}');
-    char *endBracket = strrchr(buf, ']');
-    char *end = endBrace;
-    if (endBracket && endBracket > end) end = endBracket;
-    if (end) *(end + 1) = '\0';
+  if (start != buf) memmove(buf, start, strlen(start) + 1);
+  // 3) truncate after last '}' or ']'
+  char *endBrace = strrchr(buf, '}');
+  char *endBracket = strrchr(buf, ']');
+  char *end = endBrace;
+  if (endBracket && endBracket > end) end = endBracket;
+  if (end) *(end + 1) = '\0';
 }
 // -------------  Function to fetch data -------------------
 bool fetchUrlData(const char *url, bool ssl, char *outBuf, size_t outBufSize) {
 
-    if (WiFi.status() != WL_CONNECTED) return false;
+  if (WiFi.status() != WL_CONNECTED) return false;
 
-    HTTPClient http;
-    WiFiClient client;
-    WiFiClientSecure clientSecure;
+  HTTPClient http;
+  WiFiClient client;
+  WiFiClientSecure clientSecure;
 
-    if (ssl) {
-        clientSecure.setInsecure();
-        http.begin(clientSecure, url);
-    } else {
-        http.begin(client, url);
-    }
+  if (ssl) {
+    clientSecure.setInsecure();
+    http.begin(clientSecure, url);
+  } else {
+    http.begin(client, url);
+  }
 
-    int code = http.GET();
-    if (code <= 0) {
-        http.end();
-        return false;
-    }
-
-    WiFiClient *stream = http.getStreamPtr();
-    size_t idx = 0;
-
-    const uint32_t timeout = millis() + 8000;
-
-    while (millis() < timeout && idx < outBufSize - 1) {
-        if (!stream->available()) {
-            delay(1);
-            continue;
-        }
-        int c = stream->read();
-        if (c < 0) continue;
-        outBuf[idx++] = (char)c;
-    }
-    outBuf[idx] = '\0';
-    log_d("Fetched %u bytes\n %s", idx, outBuf);
+  int code = http.GET();
+  if (code <= 0) {
     http.end();
-    return (idx > 0);
+    return false;
+  }
+
+  WiFiClient *stream = http.getStreamPtr();
+  size_t idx = 0;
+
+  const uint32_t timeout = millis() + 8000;
+
+  while (millis() < timeout && idx < outBufSize - 1) {
+    if (!stream->available()) {
+      delay(1);
+      continue;
+    }
+    int c = stream->read();
+    if (c < 0) continue;
+    outBuf[idx++] = (char)c;
+  }
+  outBuf[idx] = '\0';
+  log_d("Fetched %u bytes\n %s", idx, outBuf);
+  http.end();
+  return (idx > 0);
 }
 //----------------------------------------------

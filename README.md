@@ -2,17 +2,12 @@
 
 TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. It combines high-quality audio playback with a modern, touch-screen interface to deliver a complete desktop companion experience.
 
-[How to play TuneBar](https://www.youtube.com/...)
-
 ![TuneBar Example](document/example.jpg)
 
-## 🧘 No Code, No Headache
 
-Is your idea of a "good time" *not* debugging C++? Just want the shiny gadget to work?
-We did the nerd stuff so you don't have to.
-[**Flash it here and pretend you coded it**](https://vaandcob.github.io/webpage/src/index.html)
+## [🎬 Youtube](https://www.youtube.com/@vaandcob) Recommend watch the YouTube video for usage instructions.
 
-## Features
+## ✅ Features
 
 *   **Internet Radio**: Stream online radio stations via WiFi.
 *   **Hi-Res Audio Player**: Supports playback of MP3, FLAC, and AAC audio formats.
@@ -46,8 +41,8 @@ We did the nerd stuff so you don't have to.
 ## 📻 Radio Stations (SD Card)
 
 To manage your radio station list, you can create a `station.csv` file and upload it via the SD card.
+
 An example `station.csv` is available in the `/sketch/data` folder.
-To upload, go to the **Config -> Radio** tab and click **UPLOAD**.
 
 ### CSV Format
 The file should contain one station per line in the format: `Station Name,URL`.
@@ -60,10 +55,10 @@ Smooth Chill,http://media-the.musicradio.com/SmoothChillMP3
 ```
 
 ### How to Upload
-1.  Create the `station.csv` file on your computer.
+1.  Create or Edit the `station.csv` file on your computer.
 2.  Copy the file to the root directory of a FAT32 formatted microSD card.
 3.  Insert the SD card into the TuneBar device.
-4.  Restart the device to load the stations.
+4.  To upload, go to the **Config -> Radio** tab and click **UPLOAD**.
 
 ## 🎶 Media Player Support
 
@@ -71,6 +66,12 @@ TuneBar supports playback of MP3, AAC, FLAC, and WAV files, utilizing the [ESP32
 
 To use this feature, copy your media files to the SD card. The system supports folder structures up to 5 levels deep.
 Go to the **Config -> Music** tab, then click **LOAD** to index the music files.
+
+## 🧘 No Code, No Headache
+
+Is your idea of a "good time" *not* debugging C++? Just want the shiny gadget to work?
+We did the nerd stuff so you don't have to.
+[**Flash it here and pretend you coded it**](https://vaandcob.github.io/webpage/src/index.html)
 
 ## License
 

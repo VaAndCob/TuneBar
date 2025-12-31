@@ -71,7 +71,7 @@ void setup() {
   randomSeed(esp_random());
   Serial.begin(115200);
   delay(100);
-  log_i("🎧🕺💃👯💫[TuneBar] by Va&Cob👯🕺💃🎧");
+  log_i("[TuneBar] by Va&Cob");
 
   // input pin
   pinMode(BOOT, INPUT_PULLUP); // volume down

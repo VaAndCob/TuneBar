@@ -37,7 +37,7 @@ We did the nerd stuff so you don't have to.
 
 ## 🛒 Where to Buy
 
-*   [AliExpress](https://s.click.aliexpress.com/e/_c3M...)
+*   [AliExpress](https://s.click.aliexpress.com/e/_c3ML7dDr)
 
 ## ℹ️ Resources
 

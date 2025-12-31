@@ -1,8 +1,14 @@
-# 🎧🕺💃👯💫[TuneBar] by Va&Cob👯🕺💃🎧
+# 🎧🕺💃👯💫[ TuneBar ] by Va&Cob 💫👯🕺💃🎧
 
 TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. It combines high-quality audio playback with a modern, touch-screen interface to deliver a complete desktop companion experience.
 
 [How to play TuneBar](https://www.youtube.com/...)
+
+## 🧘 No Code, No Headache
+
+Is your idea of a "good time" *not* debugging C++? Just want the shiny gadget to work?
+We did the nerd stuff so you don't have to.
+[**Flash it here and pretend you coded it**](https://vaandcob.github.io/webpage/src/index.html)
 
 ## Features
 
@@ -15,7 +21,7 @@ TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. 
 *   **Interactive UI**: A smooth, responsive graphical user interface built with [LVGL](https://lvgl.io/), designed using SquareLine Studio.
 *   **Torch**: Built-in light functionality.
 *   **OTA Firmware Update**: Wireless firmware updates.
-*   **AI Voice Chat**: Planned feature for a future update.
+*   **AI Voice Chat**: Planned feature for a future update.🚧 (not yet implemented)
 
 
 ## 💻 Hardware Specifications

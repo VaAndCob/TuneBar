@@ -1,4 +1,4 @@
-# 🎧🕺💃👯💫[ TuneBar ] by Va&Cob 💫👯🕺💃🎧
+# 🎧🕺💃👯💫[ TuneBar ]💫👯🕺💃🎧
 
 TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. It combines high-quality audio playback with a modern, touch-screen interface to deliver a complete desktop companion experience.
 

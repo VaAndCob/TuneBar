@@ -18,6 +18,7 @@ TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. 
 *   **Interactive UI**: A smooth, responsive graphical user interface built with [LVGL](https://lvgl.io/), designed using SquareLine Studio.
 *   **Torch**: Built-in light functionality.
 *   **OTA Firmware Update**: Wireless firmware updates.
+*   **Multi-language Font Support**: Currently supports Thai. Other languages can be added by replacing font files in the code (see `sketch/test/add_thai_fonts` for details).
 *   **AI Voice Chat**: Planned feature for a future update.🚧 (not yet implemented)
 
 

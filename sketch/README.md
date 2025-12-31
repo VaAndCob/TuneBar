@@ -20,18 +20,9 @@ The project follows the standard PlatformIO structure:
 *   `include/`: Global header files.
 *   `platformio.ini`: Project configuration file (board settings, build flags, library dependencies).
 
-## Library References
-
-The project relies on the following key libraries, managed via `platformio.ini`:
-
-*   **LVGL**: (Light and Versatile Graphics Library) Used for the graphical user interface.
-*   **ArduinoJson**: Used for parsing JSON data from Weather and Air Quality APIs.
-*   **Audio**: (or specific I2S library) Handles audio stream decoding and playback.
-*   **WiFi & HTTPClient**: Standard ESP32 libraries for network connectivity.
-
 ## Getting Started
 
-1.  **Install Tools**: Install VS Code and the PlatformIO extension.
+1.  **Install Tools**: Install VS Code, the PlatformIO extension, and the pioArduino extension.
 2.  **Open Project**: Open this `sketch` folder within VS Code.
 3.  **Install Dependencies**: PlatformIO will automatically download the libraries listed in `platformio.ini` upon the first build.
 4.  **Configuration**:

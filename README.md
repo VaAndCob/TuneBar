@@ -4,6 +4,8 @@ TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. 
 
 [How to play TuneBar](https://www.youtube.com/...)
 
+![TuneBar Example](document/example.jpg)
+
 ## 🧘 No Code, No Headache
 
 Is your idea of a "good time" *not* debugging C++? Just want the shiny gadget to work?
@@ -71,5 +73,8 @@ To use this feature, copy your media files to the SD card. The system supports f
 Go to the **Config -> Music** tab, then click **LOAD** to index the music files.
 
 ## License
+
+This project is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/) license.
+You are free to use, modify, and distribute this software for **non-commercial purposes only**.
 
 This project uses open-source libraries. Please refer to the specific license files for LVGL, ArduinoJson, and the ES8311 driver.

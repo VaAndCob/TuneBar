@@ -142,6 +142,8 @@ static void ota_close_popup_async() {
         if (ota_popup) {
           lv_obj_del(ota_popup);
           ota_popup = NULL;
+          lv_obj_del(modal_blocker);
+          modal_blocker = NULL;
         }
       },
       NULL);

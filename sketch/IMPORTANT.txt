@@ -1,0 +1,18 @@
+After export lvgl with squareline studio
+Edit the src/ui/ui.c
+
+comment out these lines
+//PropertyAnimation_0_user_data->imgset = (lv_img_dsc_t **)ui_imgset_;
+//PropertyAnimation_0_user_data->imgset_size = sizeof(ui_imgset_)/(sizeof(lv_img_dsc_t*));
+
+//PropertyAnimation_1_user_data->imgset = (lv_img_dsc_t **)ui_imgset_;
+//PropertyAnimation_1_user_data->imgset_size = sizeof(ui_imgset_)/(sizeof(lv_img_dsc_t*));
+
+-----------------------------------------------------
+To use other fonts lingo (for ex, Thai)
+Copy font file .c  from 'test/add_thai_fonts' to 'src/ui'
+
+-------------------------------------------------------
+all detail about create other lingo font, please read from /test/add_thai_fonts/how_to_create_font.txt
+
+-------------------------------------------------------

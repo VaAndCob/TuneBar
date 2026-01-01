@@ -2,7 +2,7 @@
 
 TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. It combines high-quality audio playback with a modern, touch-screen interface to deliver a complete desktop companion experience.
 
-![TuneBar Example](document/example.jpg)
+![TuneBar Example](document/showcase.jpg)
 
 
 ## [🎬 Youtube](https://www.youtube.com/@vaandcob) Recommend watch the YouTube video for usage instructions.

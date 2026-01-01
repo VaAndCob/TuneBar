@@ -343,42 +343,62 @@ void sanitizeJson(char *buf) {
 // -------------  Function to fetch data -------------------
 bool fetchUrlData(const char *url, bool ssl, char *outBuf, size_t outBufSize) {
 
-  if (WiFi.status() != WL_CONNECTED) return false;
+    if (WiFi.status() != WL_CONNECTED) return false;
 
-  HTTPClient http;
-  WiFiClient client;
-  WiFiClientSecure clientSecure;
+    HTTPClient http;
+    WiFiClient client;
+    WiFiClientSecure clientSecure;
 
-  if (ssl) {
-    clientSecure.setInsecure();
-    http.begin(clientSecure, url);
-  } else {
-    http.begin(client, url);
-  }
-
-  int code = http.GET();
-  if (code <= 0) {
-    http.end();
-    return false;
-  }
-
-  WiFiClient *stream = http.getStreamPtr();
-  size_t idx = 0;
-
-  const uint32_t timeout = millis() + 8000;
-
-  while (millis() < timeout && idx < outBufSize - 1) {
-    if (!stream->available()) {
-      delay(1);
-      continue;
+    if (ssl) { //use PSRAM for TLS
+        clientSecure.setInsecure();
+        http.begin(clientSecure, url);
+    } else { //use IRAM for non-TLS
+        http.begin(client, url);
     }
-    int c = stream->read();
-    if (c < 0) continue;
-    outBuf[idx++] = (char)c;
-  }
-  outBuf[idx] = '\0';
-  log_d("Fetched %u bytes\n %s", idx, outBuf);
-  http.end();
-  return (idx > 0);
+
+    http.setConnectTimeout(5000);// TLS handshake timeout
+
+     int code = http.GET();
+    if (code <= 0) {
+        http.end();
+        return false;
+    }
+
+    WiFiClient *stream = http.getStreamPtr();
+
+    size_t idx = 0;
+    int len = http.getSize();   // -1 if chunked
+    uint32_t deadline = millis() + 10000;//allow max 10 second to fetch data
+
+    while (millis() < deadline && idx < outBufSize - 1) {
+
+        // --- Case 1: known length ---
+        if (len > 0) {
+            int n = stream->readBytes(outBuf + idx, min(len, 1024));
+            if (n <= 0) break;
+            idx += n;
+            len -= n;
+            if (len == 0) break;
+        }
+
+        // --- Case 2: chunked / no length ---
+        else {
+            if (!stream->available()) {
+                delay(1);
+                continue;
+            }
+            int n = stream->readBytes(outBuf + idx,min((int)(outBufSize - 1 - idx), 1024));
+            if (n <= 0) break;
+            idx += n;
+         
+        }
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+
+    outBuf[idx] = '\0';
+    log_d("Fetched %u bytes", (unsigned)idx);
+    http.end();
+    return (idx > 0);
 }
+
 //----------------------------------------------

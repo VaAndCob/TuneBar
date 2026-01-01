@@ -257,7 +257,7 @@ void lvgl_port_init(void) {
 
   lvgl_mux = xSemaphoreCreateMutex();
   assert(lvgl_mux);
-  xTaskCreatePinnedToCore(WAVESHARE_349_lvgl_port_task, "LVGL", 8 * 1024, NULL, 5, NULL, 0); // Run Core 0
+  xTaskCreatePinnedToCore(WAVESHARE_349_lvgl_port_task, "LVGL", 16 * 1024, NULL, 5, NULL, 0); // Run Core 0
   if (WAVESHARE_349_lvgl_lock(-1)) {
 
     ui_init();

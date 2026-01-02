@@ -8,6 +8,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <esp_ota_ops.h>
+#include "lcd_bl_bsp/lcd_bl_pwm_bsp.h"
 
 const char *compile_date = __DATE__ " - " __TIME__;
 const char *current_version = "1.1.0";
@@ -20,6 +21,7 @@ static lv_obj_t *ota_popup = NULL;
 static lv_obj_t *ota_bar = NULL;
 static lv_obj_t *ota_msg = NULL;
 static lv_obj_t *btn_close = NULL;
+static lv_obj_t *lbl_update = NULL;
 
 static volatile bool ota_abort = false;
 
@@ -110,12 +112,16 @@ const char *newFirmwareAvailable() { // return the new firmware version string i
 /* ============= OTA UPDATER FUNCTIONS ========= */
 // status message
 static void ota_set_message_async(const char *txt) {
-  log_i("%s", txt);
+  if (!txt) return;
+  char *copy = strdup(txt); // 👈 heap copy
+  if (!copy) return;
+  log_i("%s", copy);
   lv_async_call(
       [](void *p) {
         if (ota_msg) lv_label_set_text(ota_msg, (const char *)p);
+        free(p); // 👈 free after use
       },
-      (void *)txt);
+      copy);
 }
 typedef struct {
   uint8_t pct;
@@ -123,6 +129,7 @@ typedef struct {
 } ota_ui_msg_t;
 
 static void ota_set_progress_async(uint8_t pct, const char *txt) {
+  log_i("%s", txt);
   ota_ui_msg_t *m = (ota_ui_msg_t *)lv_mem_alloc(sizeof(ota_ui_msg_t));
   m->pct = pct;
   strncpy(m->txt, txt, sizeof(m->txt) - 1);
@@ -136,81 +143,153 @@ static void ota_set_progress_async(uint8_t pct, const char *txt) {
       },
       m);
 }
+static void ota_set_btn_label_async(const char *txt) {
+  if (!txt) return;
+  char *copy = strdup(txt); // 👈 heap copy
+  if (!copy) return;
+  log_i("%s", copy);
+  lv_async_call(
+      [](void *p) {
+        lv_obj_clear_flag(btn_close, LV_OBJ_FLAG_HIDDEN);
+        if (lbl_update) lv_label_set_text(lbl_update, (const char *)p);
+        free(p); // 👈 free after use
+      },
+      copy);
+}
 
 /* ========== OTA TASK ========== */
 void ota_task(void *param) {
-
-  ota_abort = false;
+  ota_set_message_async(LV_SYMBOL_REFRESH " Starting update...");
 
   const char *firmwareURL = "https://vaandcob.github.io/webpage/firmware/tunebar/tunebar.bin";
 
-  static HTTPClient client;
-  static WiFiClient *stream = nullptr;
-  static uint32_t fileSize = 0;
+  uint8_t temp_screen_off_delay = SCREEN_OFF_DELAY;//force turn screen on
+  SCREEN_OFF_DELAY = 0;
 
-  client.begin(firmwareURL);
+  ota_abort = false;
+  bool ok = true;
 
-  int httpCode = client.GET();
-  if (httpCode != HTTP_CODE_OK) {
-    ota_set_message_async(LV_SYMBOL_WARNING " HTTP error");
-    goto cleanup;
+  WiFiClientSecure otaClient;
+  HTTPClient otaHttp;
+  otaClient.setInsecure();
+
+  if (!otaHttp.begin(otaClient, firmwareURL)) {
+    ota_set_message_async(LV_SYMBOL_WARNING " Update failed: HTTP begin failed");
+    ok = false;
   }
 
-  fileSize = client.getSize();
-  stream = client.getStreamPtr();
+  int httpCode = -1;
+  int fileSize = -1;
+  WiFiClient *stream = nullptr;
 
-  if (!Update.begin(fileSize)) {
-    ota_set_message_async(LV_SYMBOL_WARNING " Not enough space");
-    goto cleanup;
+  if (ok) {
+    httpCode = otaHttp.GET();
+    if (httpCode != HTTP_CODE_OK) {
+      char msg[96];
+      snprintf(msg, sizeof(msg), LV_SYMBOL_WARNING " Update failed: HTTP error %d", httpCode);
+      ota_set_message_async(msg);
+      ok = false;
+    }
   }
 
-  Update.onProgress([](size_t progress, size_t total) {
-    static uint8_t old_pct = 0;
-    uint8_t pct = (progress * 100) / total;
-    if (pct == old_pct) return; // no change
-    log_i("OTA Progress: %u%%", (unsigned)pct);
-    old_pct = pct;
-    char buf[32];
-    snprintf(buf, sizeof(buf), "Updating %d %%", old_pct);
-    ota_set_progress_async(pct, buf);
-  });
-
-  uint8_t buff[1024];
-
-  while (client.connected() && fileSize > 0) {
-
-    if (ota_abort) {
-      ota_set_message_async(LV_SYMBOL_CLOSE " Aborted");
-      goto cleanup;
+  if (ok) {
+    fileSize = otaHttp.getSize();
+    if (fileSize > 0) {
+      if (!Update.begin(fileSize)) ok = false;
+    } else {
+      if (!Update.begin(UPDATE_SIZE_UNKNOWN)) ok = false;
     }
 
-    size_t size = stream->available();
-    if (size) {
-      int c = stream->readBytes(buff, (size > sizeof(buff)) ? sizeof(buff) : size);
-      Update.write(buff, c);
-      fileSize -= c;
+    if (!ok) {
+      ota_set_message_async(LV_SYMBOL_WARNING " Update failed: Not enough space");
     }
-    vTaskDelay(pdMS_TO_TICKS(1));
   }
 
-  if (fileSize == 0 && Update.end(true)) {
-    ota_set_message_async(LV_SYMBOL_OK " Update OK — rebooting…");
+  if (ok) {
+    stream = otaHttp.getStreamPtr();
+    if (!stream) {
+      ota_set_message_async(LV_SYMBOL_WARNING " Update failed: No stream");
+      ok = false;
+    }
+  }
+
+  if (ok) {
+    Update.onProgress([](size_t progress, size_t total) {
+      static uint8_t old_pct = 0;
+      uint8_t pct = (progress * 100) / total;
+      if (pct == old_pct) return;
+      old_pct = pct;
+
+      char buf[32];
+      snprintf(buf, sizeof(buf), LV_SYMBOL_DOWNLOAD " Updating %d %%", pct);
+      ota_set_progress_async(pct, buf);
+    });
+
+    uint8_t buff[512];
+    uint32_t lastData = millis();
+    size_t written = 0;
+
+    while (!ota_abort && Update.isRunning()) {
+
+      size_t avail = stream->available();
+
+      if (avail) {
+        size_t toRead = avail;
+        if (toRead > sizeof(buff)) toRead = sizeof(buff);
+
+        int c = stream->readBytes(buff, toRead);
+        if (c > 0) {
+          Update.write(buff, c);
+          written += c;
+          lastData = millis();
+        }
+
+        // ✅ EXIT WHEN FULL FILE RECEIVED
+        if (fileSize > 0 && written >= (size_t)fileSize) {
+          break;
+        }
+        // determine min stack available
+        static size_t minEver = SIZE_MAX;
+        size_t cur = uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t);
+        if (cur < minEver) {
+          minEver = cur;
+          log_i("OTA stack min ever: %u bytes", minEver);
+        }
+
+      } else if (!stream->connected()) {
+        // ✅ SERVER CLOSED CONNECTION (normal end)
+        break;
+
+      } else if (millis() - lastData > 5000) {
+        ota_set_message_async(LV_SYMBOL_WARNING " Update failed: Timeout");
+        ok = false;
+        break;
+      }
+      vTaskDelay(pdMS_TO_TICKS(1));
+    }
+  }
+
+  if (ok && Update.end(true)) {
+    ota_set_message_async(LV_SYMBOL_OK " Update success: Rebooting…");
     esp_ota_mark_app_valid_cancel_rollback();
-    vTaskDelay(pdMS_TO_TICKS(1200));
+    vTaskDelay(pdMS_TO_TICKS(800));
     esp_restart();
-  } else {
-    ota_set_message_async(LV_SYMBOL_WARNING " Update failed");
+  }  else {
+     ota_set_btn_label_async(LV_SYMBOL_DOWNLOAD " Update");
   }
 
-cleanup:
-  Update.onProgress(nullptr); // detach callback
-  client.end();
+  Update.onProgress(nullptr);//update callback
+
   if (Update.isRunning()) {
     Update.abort();
     Update.end(false);
   }
+
+  otaHttp.end(); 
+  SCREEN_OFF_DELAY = temp_screen_off_delay;//set screen timer back
+  BL_OFF = true;
   otaTaskHandle = NULL;
-  vTaskDelete(NULL); // <- CRITICAL (do not return)
+  vTaskDelete(NULL);
 }
 
 /* ========== POPUP UI ========== */
@@ -262,7 +341,8 @@ void ota_show_popup() {
           lv_obj_del(modal_blocker);
           modal_blocker = NULL;
         }
-      }, LV_EVENT_CLICKED, NULL);
+      },
+      LV_EVENT_CLICKED, NULL);
 
   // Progress bar
   ota_bar = lv_bar_create(ota_popup);
@@ -279,20 +359,21 @@ void ota_show_popup() {
   lv_obj_center(lbl_update);
 
   lv_obj_add_event_cb(
-    btn_update,
-    [](lv_event_t *e) {
+      btn_update,
+      [](lv_event_t *e) {
         lv_obj_t *lbl_update = (lv_obj_t *)lv_event_get_user_data(e);
         if (!lbl_update) return;
         if (otaTaskHandle == NULL) {
-            lv_label_set_text(ota_msg, "Starting update...");
-            lv_label_set_text(lbl_update, LV_SYMBOL_CLOSE " Abort & Reboot");
-            xTaskCreatePinnedToCore( ota_task,"ota_task",10 * 1024, NULL, 4, &otaTaskHandle, 1 );
+          lv_obj_add_flag(btn_close, LV_OBJ_FLAG_HIDDEN);
+          lv_label_set_text(lbl_update, LV_SYMBOL_CLOSE " Abort & Reboot");
+          //begin OTA Task
+          xTaskCreatePinnedToCore(ota_task, "ota_task", 6 * 1024, NULL, 4, &otaTaskHandle, 1);
         } else {
-            lv_label_set_text(ota_msg, "Update aborted. Rebooting...");
-            lv_timer_create([](lv_timer_t *) { esp_restart(); }, 500, NULL );
+          lv_label_set_text(ota_msg, "Update aborted. Rebooting...");
+          lv_timer_create([](lv_timer_t *) { esp_restart(); }, 500, NULL);
         }
-    }, LV_EVENT_CLICKED,lbl_update
-  );
+      },
+      LV_EVENT_CLICKED, lbl_update);
 
   // swap
   lv_obj_set_parent(ui_Utility_Panel_blindPanel, lv_layer_top());

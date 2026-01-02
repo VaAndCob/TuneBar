@@ -1,6 +1,9 @@
 # 🎧🕺💃👯💫[ TuneBar ]💫👯🕺💃🎧
+![Version](https://img.shields.io/badge/version-1.1.1-blue)
 
-TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. It combines high-quality audio playback with a modern, touch-screen interface to deliver a complete desktop companion experience.
+**TuneBar** is a custom-engineered, palm-sized media bar powered by the ESP32-S3. Its compact, stick-like design allows it to sit on your table or travel with you anywhere. Developed with a focus on original software design, it features a unique, self-designed UI/UX and custom code implementations tailored for performance.
+
+This project integrates a versatile music player and internet radio with practical daily utilities—including real-time weather, air quality monitoring, and a digital clock—offering a functional and aesthetically unique experience whether stationary or on the go.
 
 ![TuneBar Example](document/showcase.jpg)
 
@@ -10,7 +13,7 @@ TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. 
 ## ✅ Features
 
 *   **Internet Radio**: Stream online radio stations via WiFi.
-*   **Hi-Res Audio Player**: Supports playback of MP3, FLAC, and AAC audio formats.
+*   **Audio Player**: Supports playback of MP3, FLAC, and AAC audio formats.
 *   **Weather Station**: Location-based real-time weather condition display, updated every 15 minutes.
 *   **Air Quality Display**: Location-based air quality monitoring, updated every 15 minutes.
 *   **Digital Clock**: Precise timekeeping and display (Note: Time resets on power loss due to hardware design).
@@ -18,7 +21,9 @@ TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. 
 *   **Interactive UI**: A smooth, responsive graphical user interface built with [LVGL](https://lvgl.io/), designed using SquareLine Studio.
 *   **Torch**: Built-in light functionality.
 *   **OTA Firmware Update**: Wireless firmware updates.
-*   **AI Voice Chat**: Planned feature for a future update.🚧 (not yet implemented)
+*   **Planned feature for a future update.🚧 (not yet implemented)**
+    - AI Voice Chat
+    - Games
 
 
 ## 💻 Hardware Specifications
@@ -31,15 +36,13 @@ TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. 
 *   **Connectivity**: 2.4GHz Wi-Fi & Bluetooth 5 (LE)
 *   Core audio functionality is powered by the [ESP32-audioI2S](https://github.com/schreibfaul1/ESP32-audioI2S) library.
 
-## 🛒 Where to Buy
+## 🛒 Where to Buy (affiliate) [AliExpress](https://s.click.aliexpress.com/e/_c3ML7dDr)
 
-*   [AliExpress](https://s.click.aliexpress.com/e/_c3ML7dDr)
+## ℹ️ Resources [Waveshare Wiki](http://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-3.49)
 
-## ℹ️ Resources
+## 💾 Customizing Radio & Music (SD Card)
 
-*   [Waveshare Wiki](http://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-3.49)
-
-## 📻 Radio Stations (SD Card)
+### 📻 Radio Stations
 
 To manage your radio station list, you can create a `station.csv` file and upload it via the SD card.
 
@@ -61,18 +64,19 @@ Smooth Chill,http://media-the.musicradio.com/SmoothChillMP3
 3.  Insert the SD card into the TuneBar device.
 4.  To upload, go to the **Config -> Radio** tab and click **UPLOAD**.
 
-## 🎶 Media Player Support
+### 🎶 Media Player Support
 
 TuneBar supports playback of MP3, AAC, FLAC, and WAV files.
 
 To use this feature, copy your media files to the SD card. The system supports folder structures up to 5 levels deep.
 Go to the **Config -> Music** tab, then click **LOAD** to index the music files.
 
-## 🧘 No Code, No Headache
+## 🧘 Quick start, flash and go, no code needed
 
 Is your idea of a "good time" *not* debugging C++? Just want the shiny gadget to work?
 We did the nerd stuff so you don't have to.
-[**Flash it here and pretend you coded it**](https://vaandcob.github.io/webpage/src/index.html)
+
+- [Flash TuneBar here](https://vaandcob.github.io/webpage/src/index.html)
 
 ## License
 
@@ -80,3 +84,6 @@ This project is licensed under the [Creative Commons Attribution-NonCommercial-S
 You are free to use, modify, and distribute this software for **non-commercial purposes only**.
 
 This project uses open-source libraries. Please refer to the specific license files for LVGL, ArduinoJson, and the ES8311 driver.
+
+-----
+[![Buy Me a Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=☕&slug=vaandcob&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/vaandcob)

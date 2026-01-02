@@ -92,11 +92,8 @@ if ( event_code == LV_EVENT_CLICKED) {
 void ui_event_Utility_Panel_blindPanel( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
-if ( event_code == LV_EVENT_LONG_PRESSED) {
+if ( event_code == LV_EVENT_CLICKED) {
       turnonScreen( e );
-}
-if ( event_code == LV_EVENT_RELEASED) {
-      unlockScreen( e );
 }
 }
 
@@ -221,11 +218,11 @@ lv_label_set_text(ui_Utility_Label_Label28,"X");
 lv_obj_set_style_text_font(ui_Utility_Label_Label28, &lv_font_montserrat_32, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_Utility_Button_UpdateFirmware = lv_btn_create(ui_Utility_Panel_SystemInfo);
-lv_obj_set_width( ui_Utility_Button_UpdateFirmware, 100);
-lv_obj_set_height( ui_Utility_Button_UpdateFirmware, 80);
-lv_obj_set_x( ui_Utility_Button_UpdateFirmware, 99 );
-lv_obj_set_y( ui_Utility_Button_UpdateFirmware, -43 );
-lv_obj_set_align( ui_Utility_Button_UpdateFirmware, LV_ALIGN_CENTER );
+lv_obj_set_width( ui_Utility_Button_UpdateFirmware, 233);
+lv_obj_set_height( ui_Utility_Button_UpdateFirmware, 49);
+lv_obj_set_x( ui_Utility_Button_UpdateFirmware, -46 );
+lv_obj_set_y( ui_Utility_Button_UpdateFirmware, -16 );
+lv_obj_set_align( ui_Utility_Button_UpdateFirmware, LV_ALIGN_TOP_RIGHT );
 lv_obj_add_flag( ui_Utility_Button_UpdateFirmware, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_SCROLL_ON_FOCUS );   /// Flags
 lv_obj_clear_flag( ui_Utility_Button_UpdateFirmware, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 lv_obj_set_style_radius(ui_Utility_Button_UpdateFirmware, 15, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -242,13 +239,13 @@ ui_Utility_Label_Label11 = lv_label_create(ui_Utility_Button_UpdateFirmware);
 lv_obj_set_width( ui_Utility_Label_Label11, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_Utility_Label_Label11, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_align( ui_Utility_Label_Label11, LV_ALIGN_CENTER );
-lv_label_set_text(ui_Utility_Label_Label11,"Update\nVersion");
+lv_label_set_text(ui_Utility_Label_Label11,"Update");
 lv_obj_set_style_text_color(ui_Utility_Label_Label11, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_Utility_Label_Label11, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_letter_space(ui_Utility_Label_Label11, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_line_space(ui_Utility_Label_Label11, 5, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_align(ui_Utility_Label_Label11, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_text_font(ui_Utility_Label_Label11, &lv_font_montserrat_16, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_font(ui_Utility_Label_Label11, &lv_font_montserrat_24, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_Utility_Button_returnMenu = lv_btn_create(ui_Screen_Utility);
 lv_obj_set_width( ui_Utility_Button_returnMenu, 100);

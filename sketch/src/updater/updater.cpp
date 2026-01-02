@@ -95,7 +95,7 @@ const char *newFirmwareAvailable() { // return the new firmware version string i
     if (versionToNumber(latestVersion) > versionToNumber(current_version)) {
       log_w("-> New firmware version available");
       char buf[32] = {0};
-      snprintf(buf, sizeof(buf), "Update\nVersion\n%s", latestVersion);
+      snprintf(buf, sizeof(buf), "Update %s", latestVersion);
       lv_label_set_text(ui_Utility_Label_Label11, buf);
       return latestVersion;
     } else {

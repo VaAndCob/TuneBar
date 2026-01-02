@@ -25,8 +25,8 @@ PCF85063 rtc;
 uint8_t timeout_index = 0; // backlight timeout index
 bool paused = false;
 uint8_t wallpaperIndex = 0;
-bool longPressed = false;
 bool mute = false;
+
 
 // set wallpaper dropdown menu
 const char *wallpaper_menu = "None\nThailand\nChristmas1\nChristmas2\nFuture\nNature\nUser1\nUser2\nUser3\nUser4\nUser5";
@@ -456,28 +456,26 @@ void setBrightness(lv_event_t *e) {
   SCREEN_OFF_TIMER = millis(); // reset timer
 }
 
-// turn on screen
+// turn on screen by double tap
+#define DOUBLE_CLICK_SPEED 1000
 void turnonScreen(lv_event_t *e) {
-  longPressed = true;
-}
-
-// Unlock screen event
-void unlockScreen(lv_event_t *e) {
-  if (longPressed) {
-    longPressed = false;
-    log_d("Unlock Screen");
-    switch (backlight_state) {
-    case 0: setUpduty(LCD_PWM_MODE_100); break;
-    case 1: setUpduty(LCD_PWM_MODE_150); break;
-    case 2: setUpduty(LCD_PWM_MODE_255); break;
-    }
+  static uint32_t last_click_time = 0;
+  uint32_t current_time = lv_tick_get();
+  if(current_time - last_click_time < DOUBLE_CLICK_SPEED) {
+       last_click_time = 0;
+      log_d("screen on");
+      switch (backlight_state) {
+      case 0: setUpduty(LCD_PWM_MODE_100); break;
+      case 1: setUpduty(LCD_PWM_MODE_150); break;
+      case 2: setUpduty(LCD_PWM_MODE_255); break;
+      }
     lv_obj_add_flag(ui_Player_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // hide blind panel
     lv_obj_add_flag(ui_MainMenu_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // hide blind panel
     lv_obj_add_flag(ui_Info_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // hide blind panel
     lv_obj_add_flag(ui_Utility_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // unhide blind panel
-    SCREEN_OFF_TIMER = millis(); // reset timer
-    BL_OFF = false; // auto backlight on
+    resetScreenOffTimer(NULL);
   }
+  last_click_time = current_time;  
 }
 
 // change wallpapaer with dropdown

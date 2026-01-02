@@ -306,11 +306,8 @@ if ( event_code == LV_EVENT_PRESSED) {
 void ui_event_MainMenu_Panel_blindPanel( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
-if ( event_code == LV_EVENT_LONG_PRESSED) {
+if ( event_code == LV_EVENT_CLICKED) {
       turnonScreen( e );
-}
-if ( event_code == LV_EVENT_RELEASED) {
-      unlockScreen( e );
 }
 }
 
@@ -823,6 +820,8 @@ lv_obj_set_style_bg_grad_dir(ui_MainMenu_Keyboard_Number, LV_GRAD_DIR_VER, LV_PA
 ui_MainMenu_Panel_blindPanel = lv_obj_create(ui_Screen_MainMenu);
 lv_obj_set_width( ui_MainMenu_Panel_blindPanel, lv_pct(100));
 lv_obj_set_height( ui_MainMenu_Panel_blindPanel, lv_pct(100));
+lv_obj_set_x( ui_MainMenu_Panel_blindPanel, -2 );
+lv_obj_set_y( ui_MainMenu_Panel_blindPanel, 0 );
 lv_obj_set_align( ui_MainMenu_Panel_blindPanel, LV_ALIGN_CENTER );
 lv_obj_add_flag( ui_MainMenu_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN );   /// Flags
 lv_obj_clear_flag( ui_MainMenu_Panel_blindPanel, LV_OBJ_FLAG_PRESS_LOCK | LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_GESTURE_BUBBLE | LV_OBJ_FLAG_SNAPPABLE | LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM | LV_OBJ_FLAG_SCROLL_CHAIN );    /// Flags

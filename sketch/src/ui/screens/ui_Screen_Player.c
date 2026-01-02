@@ -110,11 +110,8 @@ if ( event_code == LV_EVENT_CLICKED) {
 void ui_event_Player_Panel_blindPanel( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
-if ( event_code == LV_EVENT_LONG_PRESSED) {
+if ( event_code == LV_EVENT_CLICKED) {
       turnonScreen( e );
-}
-if ( event_code == LV_EVENT_RELEASED) {
-      unlockScreen( e );
 }
 }
 

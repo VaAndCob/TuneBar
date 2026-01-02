@@ -52,7 +52,7 @@ void button_input_task(void *param) {
     //-----------------------
     // screen on button
     if (digitalRead(BOOT) == LOW) { // Right most button
-      vTaskDelay(pdMS_TO_TICKS(200));
+      vTaskDelay(pdMS_TO_TICKS(500));
       if (BL_OFF) {
         log_d("< Unlock Screen with button >");
         switch (backlight_state) {
@@ -96,7 +96,7 @@ void button_input_task(void *param) {
     }
 
     vTaskDelay(pdMS_TO_TICKS(10)); // yield CPU
-  }
+  }//for {;;}
 }
 
 //==============================================

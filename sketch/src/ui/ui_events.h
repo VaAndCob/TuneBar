@@ -32,7 +32,6 @@ void saveConfig(lv_event_t * e);
 void readKeyboard(lv_event_t * e);
 void readNumpad(lv_event_t * e);
 void turnonScreen(lv_event_t * e);
-void unlockScreen(lv_event_t * e);
 void stopWeatherAnimation(lv_event_t * e);
 void changeInfoPanelNext(lv_event_t * e);
 void changeInfoPanelPrev(lv_event_t * e);

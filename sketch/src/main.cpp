@@ -68,11 +68,7 @@ void setup() {
   audio_cmd_queue = xQueueCreate(20, sizeof(AudioCommandPayload));
   assert(audio_cmd_queue != NULL);
 
-  uint32_t seed = esp_random();
-  delay(20);                 // allow TRNG to accumulate entropy
-  seed ^= esp_random();      // mix second sample
-  randomSeed(seed);
-
+  randomSeed(esp_random());
   Serial.begin(115200);
   delay(100);
   log_i("[TuneBar] by Va&Cob");

@@ -13,7 +13,6 @@
 #include <WiFiClientSecure.h>
 #include <stdint.h>
 
-
 extern PCF85063 rtc;
 
 #define WIFI_CONNECT_TIMEOUT_MS 5000
@@ -60,7 +59,8 @@ int loadWifiList(WifiEntry list[]) {
   File f = LittleFS.open(WIFI_FILE, "r");
   if (!f) return 0;
 
-  JsonDocument doc;
+  static JsonDocument doc;
+  doc.clear();
   DeserializationError err = deserializeJson(doc, f);
 
   f.close();
@@ -77,10 +77,27 @@ int loadWifiList(WifiEntry list[]) {
   int count = doc.size();
   if (count > WIFI_MAX) count = WIFI_MAX;
   for (int i = 0; i < count; i++) {
-    list[i].ssid = doc[i]["ssid"].as<String>();
-    list[i].password = doc[i]["password"].as<String>();
-    String txt = String(i + 1) + ": " + list[i].ssid + ", " + list[i].password; // debug print "ssid, password
-    log_d("%s", txt.c_str());
+
+    const char *ssid = doc[i]["ssid"];
+    const char *password = doc[i]["password"];
+
+    if (ssid) {
+      strncpy(list[i].ssid, ssid, sizeof(list[i].ssid) - 1);
+      list[i].ssid[sizeof(list[i].ssid) - 1] = '\0';
+    } else {
+      list[i].ssid[0] = '\0';
+    }
+
+    if (password) {
+      strncpy(list[i].password, password, sizeof(list[i].password) - 1);
+      list[i].password[sizeof(list[i].password) - 1] = '\0';
+    } else {
+      list[i].password[0] = '\0';
+    }
+
+    char txt[128];
+    snprintf(txt, sizeof(txt), "%d: %s, %s", i + 1, list[i].ssid, list[i].password); // debug print "ssid, password
+    log_d("%s", txt);
   }
 
   return count;
@@ -88,13 +105,23 @@ int loadWifiList(WifiEntry list[]) {
 
 // ---------------------- SAVE WIFI LIST ----------------------
 void saveWifiList(WifiEntry list[], int count) {
-  JsonDocument doc;
+  static JsonDocument doc;
+  doc.clear();
+
+  JsonArray arr = doc.to<JsonArray>();
+
   for (int i = 0; i < count; i++) {
-    JsonObject obj = doc.add<JsonObject>();
+    JsonObject obj = arr.add<JsonObject>();
     obj["ssid"] = list[i].ssid;
     obj["password"] = list[i].password;
   }
+
   File f = LittleFS.open(WIFI_FILE, "w");
+  if (!f) {
+    log_e("Failed to open WIFI_FILE for writing");
+    return;
+  }
+
   serializeJson(doc, f);
   f.close();
 }
@@ -103,11 +130,14 @@ void saveWifiList(WifiEntry list[], int count) {
 int addOrUpdateWifi(const char *ssid, const char *password, WifiEntry list[], int count) {
   // 1) Check if SSID already exists
   for (int i = 0; i < count; i++) {
-    if (list[i].ssid == ssid) {
+    if (strcmp(list[i].ssid, ssid) == 0) {
+
       // Update password + move to top
       for (int j = i; j > 0; j--) list[j] = list[j - 1];
-      list[0].ssid = ssid;
-      list[0].password = password;
+      strncpy(list[0].ssid, ssid, sizeof(list[0].ssid) - 1);
+      list[0].ssid[sizeof(list[0].ssid) - 1] = '\0';
+      strncpy(list[0].password, password, sizeof(list[0].password) - 1);
+      list[0].password[sizeof(list[0].password) - 1] = '\0';
       return count;
     }
   }
@@ -116,18 +146,23 @@ int addOrUpdateWifi(const char *ssid, const char *password, WifiEntry list[], in
   if (count < WIFI_MAX) {
     // Shift downward
     for (int i = count; i > 0; i--) list[i] = list[i - 1];
-    list[0] = {ssid, password};
+    strncpy(list[0].ssid, ssid, sizeof(list[0].ssid) - 1);
+    list[0].ssid[sizeof(list[0].ssid) - 1] = '\0';
+    strncpy(list[0].password, password, sizeof(list[0].password) - 1);
+    list[0].password[sizeof(list[0].password) - 1] = '\0';
     return count + 1;
   } else {
     // Overwrite oldest (index 9)
     for (int i = WIFI_MAX - 1; i > 0; i--) list[i] = list[i - 1];
-    list[0] = {ssid, password};
+    strncpy(list[0].ssid, ssid, sizeof(list[0].ssid) - 1);
+    list[0].ssid[sizeof(list[0].ssid) - 1] = '\0';
+    strncpy(list[0].password, password, sizeof(list[0].password) - 1);
+    list[0].password[sizeof(list[0].password) - 1] = '\0';
     return WIFI_MAX;
   }
 }
 
 // Discovery wifi network
-
 void scanWiFi(bool updateList) {
   if (updateList) updateWiFiOption("Scaning..."); // clear wifi dropdown
 
@@ -182,17 +217,19 @@ void scanWiFi(bool updateList) {
   }
   // --- Process and Display Results (common part) ---
 
-  String SSIDs = "";
+  char SSIDs[1024];
+  char txt[128];
   for (byte i = 0; i < networks; ++i) {
-    String txt = String(i + 1) + ": " + WiFi.SSID(i) + "  Ch " + WiFi.channel(i) + " (" + WiFi.RSSI(i) + ")";
-    log_d("%s", txt.c_str());
+    snprintf(txt, sizeof(txt), "%d: %s  Ch %d (%d)", i + 1, WiFi.SSID(i).c_str(), WiFi.channel(i), WiFi.RSSI(i));
+    log_d("%s", txt);
     if (i != networks - 1)
-      SSIDs = SSIDs + WiFi.SSID(i) + "\n";
+      snprintf(SSIDs, sizeof(SSIDs), "%s%s\n", SSIDs, WiFi.SSID(i).c_str());
     else
-      SSIDs = SSIDs + WiFi.SSID(i);
+      snprintf(SSIDs, sizeof(SSIDs), "%s%s", SSIDs, WiFi.SSID(i).c_str());
   }
+  SSIDs[sizeof(SSIDs) - 1] = '\0';
 
-  if (updateList) updateWiFiOption(SSIDs.c_str()); // add wifi dropdown
+  if (updateList) updateWiFiOption(SSIDs); // add wifi dropdown
   // --- Cleanup ---
   if (isAsync) {
     WiFi.scanDelete(); // Crucial for async scan
@@ -204,6 +241,7 @@ void scanWiFi(bool updateList) {
 void wifi_connect_task(void *param) {
 
   for (;;) {
+    // Wifi disconnected
     if (WiFi.status() != WL_CONNECTED) {
       if (WiFi.getMode() != WIFI_STA) WiFi.mode(WIFI_STA);
       vTaskDelay(pdMS_TO_TICKS(100));
@@ -223,14 +261,19 @@ void wifi_connect_task(void *param) {
         uint8_t matchIndex[10]; // keep the index of match ssid from wifiList.ssid
         uint8_t matchCount = 0;
         for (byte i = 0; i < networks; ++i) {
-          String ss = WiFi.SSID(i);
-          // ss.trim();
-          log_d("Checking SSID: %s", ss.c_str());
-          for (int k = 0; k < wifiCount; ++k) {
-            String stored = wifiList[k].ssid;
-            //  stored.trim();
+          char ss[64];
+          strncpy(ss, WiFi.SSID(i).c_str(), sizeof(ss) - 1);
+          ss[sizeof(ss) - 1] = '\0';
 
-            if (stored.equals(ss)) {
+          log_d("Checking SSID: %s", ss);
+          for (int k = 0; k < wifiCount; ++k) {
+
+            char stored[64];
+            strncpy(stored, wifiList[k].ssid, sizeof(stored) - 1);
+            stored[sizeof(stored) - 1] = '\0';
+            log_d("Stored SSID: %s", stored);
+
+            if (strcmp(stored, ss) == 0) {
               if (matchCount < sizeof(matchIndex)) {
                 matchIndex[matchCount++] = k;
                 log_d("Match found: %s", ss.c_str());
@@ -252,30 +295,36 @@ void wifi_connect_task(void *param) {
 
           // try to connect all matched wifi ssid
           for (uint8_t idx = 0; idx < matchCount; idx++) {
-            String networkName = wifiList[matchIndex[idx]].ssid;
-            String attemptMsg = "Attempt connecting to " + networkName;
-            log_d("%s", attemptMsg.c_str());
+            char networkName[64];
+            strncpy(networkName, wifiList[matchIndex[idx]].ssid, sizeof(networkName) - 1);
+            networkName[sizeof(networkName) - 1] = '\0';
+
+            char attemptMsg[128];
+            snprintf(attemptMsg, sizeof(attemptMsg), "Attempt connecting to %s", networkName);
+            log_i("%s", attemptMsg);
+            updateWiFiStatus(attemptMsg, 0x00FF00, 0x0000FF);
 
             // attempt to connect wifi
             if (WiFi.status() == WL_CONNECTED) WiFi.disconnect(true);
             vTaskDelay(pdMS_TO_TICKS(100));
-            WiFi.begin(wifiList[matchIndex[idx]].ssid.c_str(), wifiList[matchIndex[idx]].password.c_str());
+            WiFi.begin(wifiList[matchIndex[idx]].ssid, wifiList[matchIndex[idx]].password);
 
             unsigned long startAttemptTime = millis();
             while (WiFi.status() != WL_CONNECTED && (millis() - startAttemptTime < WIFI_CONNECT_TIMEOUT_MS)) {
               vTaskDelay(pdMS_TO_TICKS(500)); // shorter step for snappier responsiveness
               log_d(".");
             }
-
+            // check wifi connection status
             if (WiFi.status() == WL_CONNECTED) {
-              String connectedMsg = "Connected to " + networkName;
-              log_d("%s", connectedMsg.c_str());
-              updateWiFiStatus(connectedMsg.c_str(), 0x00FF00, 0x0000FF);
+              char connectedMsg[128];
+              snprintf(connectedMsg, sizeof(connectedMsg), "Connected to %s (IP: %s)", networkName, WiFi.localIP());
+              log_i("%s", connectedMsg);
+              updateWiFiStatus(connectedMsg, 0x00FF00, 0x0000FF);
               // audioPlayFS(1, "/audio/ding.mp3");
               rtc.ntp_sync(UTC_offset_hour[offset_hour_index], UTC_offset_minute[offset_minute_index]);
               rtc.calibratBySeconds(0, 0.0); // mode 0 (eery 2 second, diff_time/total_calibrate_time)
-              updateWeatherPanel(); // update weather condition once after internet connected
-              if (!firmware_checked) { // check if new firmware availabe
+                                             // check if new firmware available
+              if (!firmware_checked) {
                 const char *latestVer = newFirmwareAvailable();
                 if (latestVer != NULL) {
                   char title[48];
@@ -297,14 +346,16 @@ void wifi_connect_task(void *param) {
                         lv_obj_set_size(closeBtn, 48, 48);
                         lv_obj_set_style_text_font(closeBtn, &lv_font_montserrat_28, LV_PART_MAIN);
                         lv_obj_clear_flag(ui_Utility_Button_UpdateFirmware, LV_OBJ_FLAG_HIDDEN); // show update button
+
                         free((void *)t); // free heap copy
                       },
                       title_copy);
                 } // newfirmwareAvailable
               } // firmware checked
+              updateWeatherPanel(); // update weather condition once after internet connected
 
             } else { // Wifi not connected
-              log_w("Wrong Wi-Fi password or timeout for %s", networkName.c_str());
+              log_w("Wrong Wi-Fi password or timeout for %s", networkName);
               updateWiFiStatus("Wrong Wi-Fi password or timeout", 0xFF0000, 0x777777);
             }
           } // for each match
@@ -319,7 +370,7 @@ void wifi_connect_task(void *param) {
 
 void wifiConnect() {
   enableTlsInPsram();
-  if (wifiTask == NULL) xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 8 * 1024, NULL, 1, &wifiTask, 0);
+  if (wifiTask == NULL) xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 1, &wifiTask, 0);
 }
 
 // sanitze JSON data by removing BOM and extraneous characters
@@ -340,65 +391,71 @@ void sanitizeJson(char *buf) {
   if (endBracket && endBracket > end) end = endBracket;
   if (end) *(end + 1) = '\0';
 }
+
 // -------------  Function to fetch data -------------------
 bool fetchUrlData(const char *url, bool ssl, char *outBuf, size_t outBufSize) {
 
-    if (WiFi.status() != WL_CONNECTED) return false;
+  if (WiFi.status() != WL_CONNECTED) return false;
 
-    HTTPClient http;
-    WiFiClient client;
-    WiFiClientSecure clientSecure;
+  static HTTPClient httpPlain;
+  static HTTPClient httpTLS;
+  static WiFiClient client;
+  static WiFiClientSecure clientSecure;
 
-    if (ssl) { //use PSRAM for TLS
-        clientSecure.setInsecure();
-        http.begin(clientSecure, url);
-    } else { //use IRAM for non-TLS
-        http.begin(client, url);
+  HTTPClient *http = ssl ? &httpTLS : &httpPlain;
+
+  http->end();
+
+  if (ssl) {
+    clientSecure.setInsecure();
+    http->begin(clientSecure, url);
+  } else {
+    http->begin(client, url);
+  }
+
+  http->setConnectTimeout(3000); // TLS connection timeout
+
+  int code = http->GET();
+  if (code <= 0) {
+    http->end();
+    return false;
+  }
+
+  int len = http->getSize(); // >=0 = Content-Length, -1 = chunked
+  WiFiClient *stream = http->getStreamPtr();
+
+  size_t idx = 0;
+  uint32_t deadline = millis() + 5000;
+
+  while (millis() < deadline && idx < outBufSize - 1) {
+    if (!stream->connected()) {
+      log_w("Stream disconnected");
+      break;
+    }
+    size_t toRead;
+
+    if (len > 0) { // fast path: known length
+      toRead = min((size_t)len, outBufSize - 1 - idx);
+    } else { // chunked / unknown
+      toRead = min((size_t)1024, outBufSize - 1 - idx);
     }
 
-    http.setConnectTimeout(5000);// TLS handshake timeout
+    int n = stream->readBytes(outBuf + idx, toRead);
+    if (n <= 0) break;
 
-     int code = http.GET();
-    if (code <= 0) {
-        http.end();
-        return false;
+    idx += n;
+
+    if (len > 0) {
+      len -= n;
+      if (len == 0) break;
     }
 
-    WiFiClient *stream = http.getStreamPtr();
-
-    size_t idx = 0;
-    int len = http.getSize();   // -1 if chunked
-    uint32_t deadline = millis() + 10000;//allow max 10 second to fetch data
-
-    while (millis() < deadline && idx < outBufSize - 1) {
-
-        // --- Case 1: known length ---
-        if (len > 0) {
-            int n = stream->readBytes(outBuf + idx, min(len, 1024));
-            if (n <= 0) break;
-            idx += n;
-            len -= n;
-            if (len == 0) break;
-        }
-
-        // --- Case 2: chunked / no length ---
-        else {
-            if (!stream->available()) {
-                delay(1);
-                continue;
-            }
-            int n = stream->readBytes(outBuf + idx,min((int)(outBufSize - 1 - idx), 1024));
-            if (n <= 0) break;
-            idx += n;
-         
-        }
-        vTaskDelay(pdMS_TO_TICKS(1));
-    }
-
-    outBuf[idx] = '\0';
-    log_d("Fetched %u bytes", (unsigned)idx);
-    http.end();
-    return (idx > 0);
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
+  outBuf[idx] = '\0';
+  log_d("Fetched %u bytes", (unsigned)idx);
+  http->end();
+  return (idx > 0);
 }
 
 //----------------------------------------------

@@ -304,78 +304,69 @@ int calculate_IAQI(float Cp, const AQI_Breakpoint breakpoints[], int num_breakpo
 }
 
 //---------------- parse AQI data from JSON and calculate US AQI and dominant pollutant
-char USAQI[8];                    // enough for "500\0"
-char dominantPollutant[64];       // "PM2.5 | 123.45 ug/m3"
-void parseAQI(float co, float no2, float o3, float so2, float pm2_5, float pm10)
-{
-    // convert to required units
-    float C_pm25   = pm2_5;
-    float C_pm10   = pm10;
-    float C_o3_ppm = ugm3_to_ppm(o3,  MW_O3);
-    float C_co_ppm = ugm3_to_ppm(co,  MW_CO);
-    float C_so2_ppb = ugm3_to_ppb(so2, MW_SO2);
-    float C_no2_ppb = ugm3_to_ppb(no2, MW_NO2);
+char USAQI[8]; // enough for "500\0"
+char dominantPollutant[64]; // "PM2.5 | 123.45 ug/m3"
+void parseAQI(float co, float no2, float o3, float so2, float pm2_5, float pm10) {
+  // convert to required units
+  float C_pm25 = pm2_5;
+  float C_pm10 = pm10;
+  float C_o3_ppm = ugm3_to_ppm(o3, MW_O3);
+  float C_co_ppm = ugm3_to_ppm(co, MW_CO);
+  float C_so2_ppb = ugm3_to_ppb(so2, MW_SO2);
+  float C_no2_ppb = ugm3_to_ppb(no2, MW_NO2);
 
-    // computation bucket
-    typedef struct {
-        const char *name;
-        float concentration;
-        int aqi;
-    } PollutantResult;
+  // computation bucket
+  typedef struct {
+    const char *name;
+    float concentration;
+    int aqi;
+  } PollutantResult;
 
-    PollutantResult results[6];
+  PollutantResult results[6];
 
-    results[0] = { "PM2.5", C_pm25,   calculate_IAQI(C_pm25,   pm25_breakpoints,   NUM_PM25_BP) };
-    results[1] = { "PM10",  C_pm10,   calculate_IAQI(C_pm10,   pm10_breakpoints,   NUM_PM10_BP) };
-    results[2] = { "O3",    C_o3_ppm, calculate_IAQI(C_o3_ppm, o3_8hr_breakpoints, NUM_O3_8HR_BP) };
-    results[3] = { "CO",    C_co_ppm, calculate_IAQI(C_co_ppm, co_8hr_breakpoints, NUM_CO_8HR_BP) };
-    results[4] = { "SO2",   C_so2_ppb,calculate_IAQI(C_so2_ppb,so2_1hr_breakpoints,NUM_SO2_1HR_BP) };
-    results[5] = { "NO2",   C_no2_ppb,calculate_IAQI(C_no2_ppb,no2_1hr_breakpoints,NUM_NO2_1HR_BP) };
+  results[0] = {"PM2.5", C_pm25, calculate_IAQI(C_pm25, pm25_breakpoints, NUM_PM25_BP)};
+  results[1] = {"PM10", C_pm10, calculate_IAQI(C_pm10, pm10_breakpoints, NUM_PM10_BP)};
+  results[2] = {"O3", C_o3_ppm, calculate_IAQI(C_o3_ppm, o3_8hr_breakpoints, NUM_O3_8HR_BP)};
+  results[3] = {"CO", C_co_ppm, calculate_IAQI(C_co_ppm, co_8hr_breakpoints, NUM_CO_8HR_BP)};
+  results[4] = {"SO2", C_so2_ppb, calculate_IAQI(C_so2_ppb, so2_1hr_breakpoints, NUM_SO2_1HR_BP)};
+  results[5] = {"NO2", C_no2_ppb, calculate_IAQI(C_no2_ppb, no2_1hr_breakpoints, NUM_NO2_1HR_BP)};
 
-    // find dominant pollutant
-    int   max_aqi = -1;
-    const char *dominant_name = "N/A";
-    float dominant_conc = 0.0;
+  // find dominant pollutant
+  int max_aqi = -1;
+  const char *dominant_name = "N/A";
+  float dominant_conc = 0.0;
 
-    for (int i = 0; i < 6; i++) {
-        if (results[i].aqi > max_aqi) {
-            max_aqi = results[i].aqi;
-            dominant_name = results[i].name;
-            dominant_conc = results[i].concentration;
-        }
+  for (int i = 0; i < 6; i++) {
+    if (results[i].aqi > max_aqi) {
+      max_aqi = results[i].aqi;
+      dominant_name = results[i].name;
+      dominant_conc = results[i].concentration;
     }
+  }
 
-    // ---- format USAQI text ----
-    snprintf(USAQI, sizeof(USAQI), "%d", max_aqi);
+  // ---- format USAQI text ----
+  snprintf(USAQI, sizeof(USAQI), "%d", max_aqi);
 
-    // ---- select unit ----
-    const char *unit;
+  // ---- select unit ----
+  const char *unit;
 
-    if (strcmp(dominant_name, "PM2.5") == 0 || strcmp(dominant_name, "PM10") == 0)
-        unit = " ug/m3";
-    else if (strcmp(dominant_name, "CO") == 0 || strcmp(dominant_name, "O3") == 0)
-        unit = " ppm";
-    else
-        unit = " ppb";
+  if (strcmp(dominant_name, "PM2.5") == 0 || strcmp(dominant_name, "PM10") == 0)
+    unit = " ug/m3";
+  else if (strcmp(dominant_name, "CO") == 0 || strcmp(dominant_name, "O3") == 0)
+    unit = " ppm";
+  else
+    unit = " ppb";
 
-    // ---- final dominant pollutant string ----
-    snprintf(
-        dominantPollutant,
-        sizeof(dominantPollutant),
-        "%s | %.2f%s",
-        dominant_name,
-        dominant_conc,
-        unit
-    );
+  // ---- final dominant pollutant string ----
+  snprintf(dominantPollutant, sizeof(dominantPollutant), "%s | %.2f%s", dominant_name, dominant_conc, unit);
 
-    log_d("US AQI Overall: %s", USAQI);
-    log_d("Dominant Pollutant: %s", dominantPollutant);
+  log_d("US AQI Overall: %s", USAQI);
+  log_d("Dominant Pollutant: %s", dominantPollutant);
 }
 
 //=============   update state, US AQI, dominant pollutant icon and text ===========================
 void updateWeatherPanelTask(void *parameter) {
   log_i("fetch weather data");
-  TaskHandle_t self = weatherTask;
 
 #define MAX_URL_LENGTH 512 // กำหนดขนาดบัฟเฟอร์สูงสุดที่ปลอดภัย
 #define JSON_BUF_SIZE 2048
@@ -384,7 +375,8 @@ void updateWeatherPanelTask(void *parameter) {
   log_d("Weather request URL: %s", reqURL);
 
   static char jsonBuf[JSON_BUF_SIZE];
-  static StaticJsonDocument<JSON_BUF_SIZE > doc;
+  static JsonDocument doc;
+  doc.clear();
 
   // fetch weather condition data from weather API
   if (fetchUrlData(reqURL, false, jsonBuf, JSON_BUF_SIZE)) {
@@ -392,9 +384,9 @@ void updateWeatherPanelTask(void *parameter) {
     DeserializationError error = deserializeJson(doc, jsonBuf, strlen(jsonBuf));
 
     if (error) {
-      log_e("Weather JSON parse failed: %s", error.c_str());
+      log_e("Weather JSON parse failed: %s", error.c_str());    
       weatherTask = NULL;
-      vTaskDelete(self);
+      vTaskDelete(NULL);
       return;
     }
 
@@ -415,7 +407,7 @@ void updateWeatherPanelTask(void *parameter) {
       // parsing data
       strncpy(data.last_updated, doc["current"]["last_updated"] | "", sizeof(data.last_updated));
       snprintf(data.state, sizeof(data.state), "%s, %s", doc["location"]["name"] | "", doc["location"]["region"] | "");
- 
+
       // AQI
       data.usepa_index = doc["current"]["air_quality"]["us-epa-index"].as<uint8_t>();
       data.name = us_epa_index_names[data.usepa_index - 1]; // name of aqi level
@@ -452,7 +444,6 @@ void updateWeatherPanelTask(void *parameter) {
       parseAQI(data.co, data.no2, data.o3, data.so2, data.pm2_5, data.pm10);
 
       // 4. update weather panel
-
       // 4.1 udpate AQI pollution widget
       lv_img_set_src(ui_Info_Image_AQIimage, &us_epa_index_icon[data.usepa_index - 1]); // icon
       lv_obj_set_style_bg_color(ui_Info_Panel_AQI, lv_color_hex(us_epa_index_colors[data.usepa_index - 1]), LV_PART_MAIN); // widget color
@@ -502,9 +493,7 @@ void updateWeatherPanelTask(void *parameter) {
                  "UV Index : %.0f",
                  data.feelslike_f, data.wind_kph, data.wind_dir, data.humidity, data.pressure_in, data.uv);
       }
-
       lv_label_set_text(ui_Info_Label_Detail, details);
-
       setWeatherPanelBgColor(data.code, isNight); // set wallpaper
     }
   } else {
@@ -514,7 +503,7 @@ void updateWeatherPanelTask(void *parameter) {
   log_d("{ Task stack remaining MIN: %u bytes }", hwm);
 
   weatherTask = NULL;
-  vTaskDelete(self);
+  vTaskDelete(NULL);
 }
 
 // update weather panel function

@@ -1,10 +1,11 @@
 #pragma once
 #include <Arduino.h>
 
+
 struct WifiEntry {
-  String ssid;
-  String password;
-  int32_t rssi;
+    char ssid[64];
+    char password[64];
+    int32_t rssi;
 };
 
 extern WifiEntry wifiList[];

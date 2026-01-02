@@ -18,7 +18,6 @@ TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. 
 *   **Interactive UI**: A smooth, responsive graphical user interface built with [LVGL](https://lvgl.io/), designed using SquareLine Studio.
 *   **Torch**: Built-in light functionality.
 *   **OTA Firmware Update**: Wireless firmware updates.
-*   **Multi-language Font Support**: Currently supports Thai. Other languages can be added by replacing font files in the code (see `sketch/test/add_thai_fonts` for details).
 *   **AI Voice Chat**: Planned feature for a future update.🚧 (not yet implemented)
 
 
@@ -30,6 +29,7 @@ TuneBar is a feature-rich media player powered by the ESP32-S3 microcontroller. 
 *   **Display**: 3.49-inch Capacitive Touch Screen
 *   **Audio**: ES8311 Codec (I2S)
 *   **Connectivity**: 2.4GHz Wi-Fi & Bluetooth 5 (LE)
+*   Core audio functionality is powered by the [ESP32-audioI2S](https://github.com/schreibfaul1/ESP32-audioI2S) library.
 
 ## 🛒 Where to Buy
 
@@ -63,7 +63,7 @@ Smooth Chill,http://media-the.musicradio.com/SmoothChillMP3
 
 ## 🎶 Media Player Support
 
-TuneBar supports playback of MP3, AAC, FLAC, and WAV files, utilizing the [ESP32-audioI2S](https://github.com/schreibfaul1/ESP32-audioI2S) library.
+TuneBar supports playback of MP3, AAC, FLAC, and WAV files.
 
 To use this feature, copy your media files to the SD card. The system supports folder structures up to 5 levels deep.
 Go to the **Config -> Music** tab, then click **LOAD** to index the music files.

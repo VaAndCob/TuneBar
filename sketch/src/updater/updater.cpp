@@ -70,7 +70,8 @@ const char *newFirmwareAvailable() { // return the new firmware version string i
   // snprintf(reqURL, sizeof(reqURL), "https://cdn.jsdelivr.net/gh/VaAndCob/webpage@main/firmware/tunebar/tunebar_manifest.json");
 
   static char jsonBuf[JSON_BUF_SIZE];
-  static StaticJsonDocument<JSON_BUF_SIZE> doc;
+  static JsonDocument doc;
+  doc.clear();
 
   // fetch weather condition data from weather API
   fetchUrlData(reqURL, true, jsonBuf, JSON_BUF_SIZE);
@@ -109,6 +110,7 @@ const char *newFirmwareAvailable() { // return the new firmware version string i
 /* ============= OTA UPDATER FUNCTIONS ========= */
 // status message
 static void ota_set_message_async(const char *txt) {
+  log_i("%s", txt);
   lv_async_call(
       [](void *p) {
         if (ota_msg) lv_label_set_text(ota_msg, (const char *)p);
@@ -135,29 +137,6 @@ static void ota_set_progress_async(uint8_t pct, const char *txt) {
       m);
 }
 
-// close the ota popup
-static void ota_close_popup_async() {
-  lv_async_call(
-      [](void *) {
-        if (ota_popup) {
-          lv_obj_del(ota_popup);
-          ota_popup = NULL;
-          lv_obj_del(modal_blocker);
-          modal_blocker = NULL;
-        }
-      },
-      NULL);
-}
-// cleanup after ota task
-static void ota_cleanup(HTTPClient &client) {
-  client.end();
-  if (Update.isRunning()) {
-    Update.abort();
-    Update.end(false);
-  }
-  otaTaskHandle = NULL;
-}
-
 /* ========== OTA TASK ========== */
 void ota_task(void *param) {
 
@@ -165,9 +144,9 @@ void ota_task(void *param) {
 
   const char *firmwareURL = "https://vaandcob.github.io/webpage/firmware/tunebar/tunebar.bin";
 
-  HTTPClient client;
-  WiFiClient *stream = nullptr;
-  uint32_t fileSize = 0;
+  static HTTPClient client;
+  static WiFiClient *stream = nullptr;
+  static uint32_t fileSize = 0;
 
   client.begin(firmwareURL);
 
@@ -201,7 +180,6 @@ void ota_task(void *param) {
   while (client.connected() && fileSize > 0) {
 
     if (ota_abort) {
-      log_i("OTA aborted");
       ota_set_message_async(LV_SYMBOL_CLOSE " Aborted");
       goto cleanup;
     }
@@ -226,14 +204,18 @@ void ota_task(void *param) {
 
 cleanup:
   Update.onProgress(nullptr); // detach callback
-  ota_cleanup(client);
+  client.end();
+  if (Update.isRunning()) {
+    Update.abort();
+    Update.end(false);
+  }
   otaTaskHandle = NULL;
   vTaskDelete(NULL); // <- CRITICAL (do not return)
 }
 
 /* ========== POPUP UI ========== */
 void ota_show_popup() {
-  ota_abort = false;
+  ota_abort = true;
 
   // make modal box to block input
   modal_blocker = lv_obj_create(lv_layer_top());
@@ -257,6 +239,8 @@ void ota_show_popup() {
   lv_label_set_text(title, "Firmware Update");
   lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
   lv_obj_set_style_text_font(title, &lv_font_montserrat_18, 0);
+
+  //----------- message --------------
   ota_msg = lv_label_create(ota_popup);
   lv_label_set_text(ota_msg, "Click Update to start");
   lv_obj_align(ota_msg, LV_ALIGN_TOP_MID, 0, 34);
@@ -269,16 +253,16 @@ void ota_show_popup() {
   lv_label_set_text(lbl_x, LV_SYMBOL_CLOSE);
   lv_obj_set_style_text_font(lbl_x, &lv_font_montserrat_28, 0);
   lv_obj_center(lbl_x);
-  lv_obj_add_event_cb(// close handler
+  lv_obj_add_event_cb( // close handler
       btn_close,
       [](lv_event_t *e) {
-        ota_abort = true;
-        if (otaTaskHandle) {
-          // OTA task will cleanup itself
+        if (ota_popup) {
+          lv_obj_del(ota_popup);
+          ota_popup = NULL;
+          lv_obj_del(modal_blocker);
+          modal_blocker = NULL;
         }
-        ota_close_popup_async();
-      },
-      LV_EVENT_CLICKED, NULL);
+      }, LV_EVENT_CLICKED, NULL);
 
   // Progress bar
   ota_bar = lv_bar_create(ota_popup);
@@ -287,45 +271,32 @@ void ota_show_popup() {
   lv_bar_set_range(ota_bar, 0, 100);
   // Update button
   lv_obj_t *btn_update = lv_btn_create(ota_popup);
-  lv_obj_set_size(btn_update, 120, 44);
-  lv_obj_align(btn_update, LV_ALIGN_BOTTOM_LEFT, 15, 0);
+  lv_obj_set_size(btn_update, 180, 44);
+  lv_obj_align(btn_update, LV_ALIGN_BOTTOM_MID, 0, 0);
   lv_obj_t *lbl_update = lv_label_create(btn_update);
   lv_label_set_text(lbl_update, LV_SYMBOL_DOWNLOAD " Update");
   lv_obj_set_style_text_font(lbl_update, &lv_font_montserrat_18, 0);
   lv_obj_center(lbl_update);
 
   lv_obj_add_event_cb(
-      btn_update,
-      [](lv_event_t *e) {
-        if (!otaTaskHandle) {
-          ota_abort = false;
-          lv_label_set_text(ota_msg, "Starting update...");
-          log_i("OTA update started");
-          lv_obj_add_flag(btn_close, LV_OBJ_FLAG_HIDDEN); // show close button
-          if (otaTaskHandle == NULL)
-            xTaskCreatePinnedToCore(ota_task, "ota_task", 8192, NULL, 4, &otaTaskHandle, 1);
-          else
-            otaTaskHandle = NULL;
+    btn_update,
+    [](lv_event_t *e) {
+        lv_obj_t *lbl_update = (lv_obj_t *)lv_event_get_user_data(e);
+        if (!lbl_update) return;
+        if (otaTaskHandle == NULL) {
+            lv_label_set_text(ota_msg, "Starting update...");
+            lv_label_set_text(lbl_update, LV_SYMBOL_CLOSE " Abort & Reboot");
+            xTaskCreatePinnedToCore( ota_task,"ota_task",10 * 1024, NULL, 4, &otaTaskHandle, 1 );
+        } else {
+            lv_label_set_text(ota_msg, "Update aborted. Rebooting...");
+            lv_timer_create([](lv_timer_t *) { esp_restart(); }, 500, NULL );
         }
-      },
-      LV_EVENT_CLICKED, NULL);
-  // Abort Button
-  lv_obj_t *btn_abort = lv_btn_create(ota_popup);
-  lv_obj_set_size(btn_abort, 120, 44);
-  lv_obj_align(btn_abort, LV_ALIGN_BOTTOM_RIGHT, -15, 0);
-  lv_obj_t *lbl_abort = lv_label_create(btn_abort);
-  lv_label_set_text(lbl_abort, LV_SYMBOL_CLOSE " Abort");
-  lv_obj_set_style_text_font(lbl_abort, &lv_font_montserrat_18, 0);
-  lv_obj_center(lbl_abort);
+    }, LV_EVENT_CLICKED,lbl_update
+  );
 
-  lv_obj_add_event_cb(
-      btn_abort,
-      [](lv_event_t *e) {
-        ota_abort = true;
-        // log_i("OTA aborted");
-        lv_obj_clear_flag(btn_close, LV_OBJ_FLAG_HIDDEN); // show close button
-      },
-      LV_EVENT_CLICKED, NULL);
+  // swap
+  lv_obj_set_parent(ui_Utility_Panel_blindPanel, lv_layer_top());
+  lv_obj_move_foreground(ui_Utility_Panel_blindPanel);
 }
 //-------------  Functions to show
 
@@ -339,11 +310,11 @@ void memoryInfo(char *buf, size_t len) {
   size_t plarge = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
 
   snprintf(buf, len,
-           "Memory : Free / Min / Largest (bytes)\n"
+           "Memory : Free / Min / LFB (bytes)\n"
            "IRAM : %u / %u / %u\n"
            "PSRAM: %u / %u / %u",
            (unsigned)ifree, (unsigned)imin, (unsigned)ilarge, (unsigned)pfree, (unsigned)pmin, (unsigned)plarge);
-  log_d("%s", buf);
+  log_i("%s", buf);
 }
 
 void systemInfo(char *buf, size_t len) {

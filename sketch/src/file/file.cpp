@@ -279,9 +279,10 @@ void scan_music_task(void *pvParameters) {
   updateSDCARDStatus("Indexing music library, please wait...",0x00FF00);
   generatePlaylistFile(SD, "/", 5); // 2. Perform the blocking work: Scan and WRITE to LittleFS
   trackListLength = getTrackCount(); // 3. Update the global track count by counting lines in the new file
-  String statusMsg = LV_SYMBOL_AUDIO " Found " + String(trackListLength) + " songs."; // 4. Update the UI status with results
-  log_d("%s", statusMsg.c_str());
-  updateSDCARDStatus(statusMsg.c_str(),0x00FF00);
+  char buffer[100];
+  snprintf(buffer, sizeof(buffer), LV_SYMBOL_AUDIO " Found %d songs.", trackListLength);
+  updateSDCARDStatus(buffer,0x00FF00);
+  log_d("%s", buffer);
 
   UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
   log_d("{ Task stack remaining MIN: %u bytes }", hwm);
@@ -301,8 +302,9 @@ void initSongList() {
   if (LittleFS.exists(PLAYLIST_FILE)) {
     // Playlist exists, just read the count and notify
     trackListLength = getTrackCount();
-    String statusMsg = LV_SYMBOL_AUDIO " Loaded " + String(trackListLength) + " songs from library";
-    log_d("%s", statusMsg.c_str());
+    char statusMsg[100];
+    snprintf(statusMsg, sizeof(statusMsg), LV_SYMBOL_AUDIO " Loaded %d songs from library", trackListLength);
+    log_d("%s", statusMsg);
   } else {
     if (scanMusicTask == NULL) xTaskCreatePinnedToCore(scan_music_task, "SD_Scan_Task", 6 * 1024, NULL, 1, &scanMusicTask, 1); // Run on CPU 1 to keep UI responsive on CPU 0
   }
@@ -395,10 +397,10 @@ void loadStationList() {
     String txt = String(i + 1) + ": " + stations[i].name + "\n";
     lv_textarea_add_text(ui_MainMenu_Textarea_stationList, txt.c_str());
   }
-
-  String summary = "Total " + String(stationListLength) + " stations";
-  lv_textarea_add_text(ui_MainMenu_Textarea_stationList, summary.c_str());
-  log_d("%s", summary.c_str());
+  char summer[100];;
+  snprintf(summer, sizeof(summer), "Total %d stations", stationListLength);
+  lv_textarea_add_text(ui_MainMenu_Textarea_stationList, summer);
+  log_d("%s", summer);
 }
 
 // copy file 'stations.csv' to littleFS

@@ -11,6 +11,7 @@ CORE 1:
 
  xTaskCreatePinnedToCore(scan_music_task, "SD_Scan_Task", 6 * 1024, NULL, 1, NULL, 1);(create and delete)
  xTaskCreatePinnedToCore(updateWeatherPanelTask,"To update weather panel", 2 * 1024, NULL,3, NULL, 1);(create and delete)
+  xTaskCreatePinnedToCore(ota_task, "ota_task", 10 * 1024, NULL, 4, &otaTaskHandle, 1);(create and delete)
 
 CORE 0:
  xTaskCreatePinnedToCore(WAVESHARE_349_lvgl_port_task, "LVGL", 16384, NULL, 5, NULL, 0); // Run Core 0
@@ -20,24 +21,8 @@ xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 
 #include "task_msg/task_msg.h"
 #include <LittleFS.h>
 
-//==============================================
-/*
-// Memory Check Function
-void memory_info() {
-  size_t freeHeap = ESP.getFreeHeap();
-  size_t totalHeap = ESP.getHeapSize();
-  log_i("Heap: %u / %u bytes free (%.1f%%)", freeHeap, totalHeap, (freeHeap * 100.0 / totalHeap));
-  log_i("Min Free Heap: %u bytes", ESP.getMinFreeHeap());
-  log_i("Max Alloc Block: %u bytes", ESP.getMaxAllocHeap());
-  if (psramFound()) {
-    size_t freePSRAM = ESP.getFreePsram();
-    size_t totalPSRAM = ESP.getPsramSize();
-    log_i("PSRAM: %u / %u bytes free (%.1f%%)", freePSRAM, totalPSRAM, (freePSRAM * 100.0 / totalPSRAM));
-  } else {
-    log_i("PSRAM: Not found");
-  }
-}
-*/
+
+
 //==============================================
 // BUTTON INPUT TASK:
 void button_input_task(void *param) {

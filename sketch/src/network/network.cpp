@@ -22,7 +22,7 @@ extern PCF85063 rtc;
 WifiEntry wifiList[WIFI_MAX];
 
 byte networks = 0;
-static TaskHandle_t wifiTask = NULL;
+TaskHandle_t wifiTaskHandle = NULL;
 
 //-----------------------------------------------------------
 // Enable mbedTLS to use PSRAM for dynamic memory allocation instead of internal RAM
@@ -320,36 +320,15 @@ void wifi_connect_task(void *param) {
               snprintf(connectedMsg, sizeof(connectedMsg), "Connected to %s (IP: %s)", networkName, WiFi.localIP());
               log_i("%s", connectedMsg);
               updateWiFiStatus(connectedMsg, 0x00FF00, 0x0000FF);
-              // audioPlayFS(1, "/audio/ding.mp3");
+
               rtc.ntp_sync(UTC_offset_hour[offset_hour_index], UTC_offset_minute[offset_minute_index]);
               rtc.calibratBySeconds(0, 0.0); // mode 0 (eery 2 second, diff_time/total_calibrate_time)
-                                             // check if new firmware available
+              // check if new firmware available
+              
               if (!firmware_checked) {
-                const char *latestVer = newFirmwareAvailable();
+                const char *latestVer = newFirmwareAvailable();//get new firmware version
                 if (latestVer != NULL) {
-                  char title[48];
-                  snprintf(title, sizeof(title), LV_SYMBOL_REFRESH " New Update Available %s", latestVer);
-                  // notify user about new firmware available
-                  char *title_copy = strdup(title);
-                  lv_async_call(
-                      [](void *p) {
-                        const char *t = (const char *)p;
-                        lv_obj_t *msgBox = lv_msgbox_create(NULL, t, "To update firmware, please click\nUtilities -> System Information", NULL, true);
-                        lv_obj_set_width(msgBox, 420);
-                        lv_obj_set_style_bg_opa(msgBox, LV_OPA_90, LV_PART_MAIN);
-                        lv_obj_center(msgBox);
-                        lv_obj_t *titleObj = lv_msgbox_get_title(msgBox);
-                        lv_obj_t *textObj = lv_msgbox_get_text(msgBox);
-                        lv_obj_t *closeBtn = lv_msgbox_get_close_btn(msgBox);
-                        lv_obj_set_style_text_font(titleObj, &lv_font_montserrat_18, LV_PART_MAIN);
-                        lv_obj_set_style_text_font(textObj, &lv_font_montserrat_18, LV_PART_MAIN);
-                        lv_obj_set_size(closeBtn, 48, 48);
-                        lv_obj_set_style_text_font(closeBtn, &lv_font_montserrat_28, LV_PART_MAIN);
-                        lv_obj_clear_flag(ui_Utility_Button_UpdateFirmware, LV_OBJ_FLAG_HIDDEN); // show update button
-
-                        free((void *)t); // free heap copy
-                      },
-                      title_copy);
+                   notifyUpdate(latestVer);//notify user
                 } // newfirmwareAvailable
               } // firmware checked
               updateWeatherPanel(); // update weather condition once after internet connected
@@ -370,7 +349,7 @@ void wifi_connect_task(void *param) {
 
 void wifiConnect() {
   enableTlsInPsram();
-  if (wifiTask == NULL) xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 1, &wifiTask, 0);
+  if (wifiTaskHandle == NULL) xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 1, &wifiTaskHandle, 0);
 }
 
 // sanitze JSON data by removing BOM and extraneous characters

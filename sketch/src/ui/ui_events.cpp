@@ -231,7 +231,7 @@ void previoustrack(lv_event_t *e) {
     }
     snprintf(status_buffer, sizeof(status_buffer), "%d of %d", stationIndex + 1, stationListLength);
     lv_label_set_text(ui_Player_Label_trackNumber, status_buffer);
-    audioPlayHOST(stations[stationIndex].url.c_str(), stations[stationIndex].name.c_str());
+    audioPlayHOST(stations[stationIndex].url, stations[stationIndex].name);
     break; // break should be outside the scope block if not used for variable declaration
   }
 
@@ -262,11 +262,13 @@ void previoustrack(lv_event_t *e) {
     } else if (mediaType == 2) {
       // play same current trackIndex
     }
-    String filePath = getTrackPath(trackIndex);
-    log_d("Next track: %s", filePath.c_str());
+
+    char trackPath[512];
+    getTrackPath(trackIndex, trackPath, sizeof(trackPath));
+    log_d("Next track: %s", trackPath);
     snprintf(status_buffer, sizeof(status_buffer), "%d of %d", trackIndex + 1, trackListLength);
     lv_label_set_text(ui_Player_Label_trackNumber, status_buffer);
-    audioPlayFS(0, filePath.c_str());
+    audioPlayFS(0, trackPath);
     break;
   }
   case 2: // chatbot mode
@@ -320,7 +322,7 @@ void playpause(lv_event_t *e) {
     case 0: { // livestream mode
       snprintf(status_buffer, sizeof(status_buffer), "%d of %d", stationIndex + 1, stationListLength);
       lv_label_set_text(ui_Player_Label_trackNumber, status_buffer);
-      audioPlayHOST(stations[stationIndex].url.c_str(), stations[stationIndex].name.c_str());
+      audioPlayHOST(stations[stationIndex].url, stations[stationIndex].name);
       break; // break should be outside the scope block if not used for variable declaration
     }
     case 1: { // music player mode
@@ -329,17 +331,23 @@ void playpause(lv_event_t *e) {
         paused = false;
         return;
       }
-      String filePath = getTrackPath(trackIndex);
-      log_d("Play track: %s", filePath.c_str());
+      char trackPath[512];
+      getTrackPath(trackIndex, trackPath, sizeof(trackPath));
+      log_d("Play track: %s", trackPath);
       snprintf(status_buffer, sizeof(status_buffer), "%d of %d", trackIndex + 1, trackListLength);
       lv_label_set_text(ui_Player_Label_trackNumber, status_buffer);
 
-      audioPlayFS(0, filePath.c_str());
+      audioPlayFS(0, trackPath);
       break;
     }
     case 2: // chatbot mode
+
+        lv_label_set_text(ui_Player_Label_Label5, LV_SYMBOL_PLAY);
+    lv_obj_set_style_radius(ui_Player_Button_play, 25, LV_PART_MAIN);
+    paused = true;
             // do nothing (or add specific action for chatbot here)
-      lv_textarea_set_text(ui_Player_Textarea_status, "Listenning...");
+      /*
+            lv_textarea_set_text(ui_Player_Textarea_status, "Listenning...");
       audioStopSong();
 
       int32_t dummy[1024] = {0};
@@ -355,7 +363,7 @@ void playpause(lv_event_t *e) {
       delay(100);
       log_i("Recording Started at 48k");
       is_mic_mode = true;
-
+      */
       break; // Cleaned up: only one break needed
     }
   }
@@ -391,7 +399,7 @@ void nexttrack(lv_event_t *e) {
     }
     snprintf(status_buffer, sizeof(status_buffer), "%d of %d", stationIndex + 1, stationListLength);
     lv_label_set_text(ui_Player_Label_trackNumber, status_buffer);
-    audioPlayHOST(stations[stationIndex].url.c_str(), stations[stationIndex].name.c_str());
+    audioPlayHOST(stations[stationIndex].url, stations[stationIndex].name);
     break; // break should be outside the scope block if not used for variable declaration
   }
 
@@ -410,12 +418,13 @@ void nexttrack(lv_event_t *e) {
     } else if (mediaType == 2) { // single
       // play same current trackIndex
     }
-    String filePath = getTrackPath(trackIndex);
-    log_d("Next track: %s", filePath.c_str());
+    char trackPath[512];
+    getTrackPath(trackIndex, trackPath, sizeof(trackPath));
+    log_d("Next track: %s", trackPath);
     snprintf(status_buffer, sizeof(status_buffer), "%d of %d", trackIndex + 1, trackListLength);
     lv_label_set_text(ui_Player_Label_trackNumber, status_buffer);
 
-    audioPlayFS(0, filePath.c_str());
+    audioPlayFS(0, trackPath);
     break;
   }
 
@@ -645,18 +654,19 @@ void chatBotMode(lv_event_t *e) {
     lv_label_set_text(ui_Player_Label_Label5, LV_SYMBOL_PLAY);
     lv_obj_set_style_radius(ui_Player_Button_play, 25, LV_PART_MAIN);
     lv_textarea_set_text(ui_Player_Textarea_status, "");
-    audioStopSong();
-    // audioPlayFS(1, "/audio/ai_not_support.mp3");
+     audioStopSong();
+     audioPlayFS(1, "/audio/ai_not_support.mp3");
   }
   mediaType = 2;
+  lv_textarea_set_text(ui_Player_Textarea_status, "Under development!\n");
   lv_anim_del(NULL, (lv_anim_exec_xcb_t)_ui_anim_callback_set_image_zoom);
   lv_img_set_zoom(ui_MainMenu_Image_MusicPlayer, 256);
   lv_img_set_zoom(ui_MainMenu_Image_LiveStreaming, 256);
   bounce_Animation(ui_MainMenu_Image_ChatBot, 0);
   lv_obj_set_style_bg_img_src(ui_Player_Container_albumCover, &ui_img_images_assistant_png, LV_PART_MAIN);
-  lv_textarea_set_text(ui_Player_Textarea_status, LV_SYMBOL_WARNING " Under development\n");
   SCREEN_OFF_TIMER = millis(); // reset timer
   BL_OFF = false; // auto backlight on
+   
 }
 // informaiton Mode event
 void informationMode(lv_event_t *e) {

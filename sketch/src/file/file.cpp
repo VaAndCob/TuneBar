@@ -1,16 +1,15 @@
 //=================== File System ===========================
 #include "file.h"
-#include "ui/ui.h"
 #include "FS.h"
 #include "SD.h"
 #include "SPI.h"
 #include "lvgl.h"
+#include "task_msg/task_msg.h"
+#include "ui/ui.h"
 #include <Arduino.h>
 #include <LittleFS.h>
 #include <driver/i2s_std.h>
 #include <vector>
-#include "task_msg/task_msg.h"
-
 
 int trackListLength = 0; // NEW: Definition of global track length
 uint16_t trackIndex = 0;
@@ -18,6 +17,8 @@ uint8_t mediaType = 0; // 0: livestream, 1: music player, 2: chatbot, 3: config
 uint8_t playMode = 0; // 0 = normal, 1 = random , 2 = repeat
 
 static TaskHandle_t scanMusicTask = NULL;
+
+#define PATH_BUF_LEN 512
 
 //------------ LVGL 8.x LittleFS callbacks  -------------------------
 
@@ -75,7 +76,7 @@ lv_fs_res_t fs_seek(lv_fs_drv_t *drv, void *file_p, uint32_t pos, lv_fs_whence_t
 }
 
 //------------------------------------------------
-//init LittleFS
+// init LittleFS
 void initLittleFS() {
   if (!LittleFS.begin(false)) {
     log_e("LittleFS mount failed. Formatting...");
@@ -105,11 +106,11 @@ void initSDCard() {
   SPI.setFrequency(4000000);
   delay(100);
   if (!SD.begin(SD_CS, SPI)) {
-     log_w("SD Card Mount Failed");
-     updateSDCARDStatus(LV_SYMBOL_CLOSE " Card Mount Failed",0x777777);
+    log_w("SD Card Mount Failed");
+    updateSDCARDStatus(LV_SYMBOL_CLOSE " Card Mount Failed", 0x777777);
   } else {
-     log_d("SD Card Mounted");
-     updateSDCARDStatus(LV_SYMBOL_SD_CARD " SDCard Mounted",0x00FF00);
+    log_d("SD Card Mounted");
+    updateSDCARDStatus(LV_SYMBOL_SD_CARD " SDCard Mounted", 0x00FF00);
   }
 }
 
@@ -118,100 +119,116 @@ void initSDCard() {
 // ==========================================
 // std::vector acts like a growable array.
 // It will store the full path strings to your songs.
+static bool endsWithIgnoreCase(const char *str, const char *suffix) {
+  size_t len1 = strlen(str);
+  size_t len2 = strlen(suffix);
+  if (len2 > len1) return false;
 
-bool isAudioFile(String filename) {
-  String lowerName = filename;
-  lowerName.toLowerCase();
+  str += len1 - len2;
+  while (*suffix) {
+    if (tolower((unsigned char)*str++) != tolower((unsigned char)*suffix++)) return false;
+  }
+  return true;
+}
 
-  if (lowerName.startsWith("._")) // Check for macOS resource files
-    return false;
-  if (lowerName.endsWith(".mp3"))
-    return true;
-  else if (lowerName.endsWith(".aac"))
-    return true;
-  else if (lowerName.endsWith(".flac"))
-    return true;
-  else if (lowerName.endsWith(".opus"))
-    return true;
-  else if (lowerName.endsWith(".vorbis"))
-    return true;
-  else if (lowerName.endsWith(".wav"))
-    return true;
-
-  return false;
+bool isAudioFile(const char *filename) {
+  if (!filename || filename[0] == '\0') return false;
+  // Skip macOS resource files
+  if (strncmp(filename, "._", 2) == 0) return false;
+  return endsWithIgnoreCase(filename, ".mp3") || endsWithIgnoreCase(filename, ".aac") || endsWithIgnoreCase(filename, ".flac") || endsWithIgnoreCase(filename, ".opus") || endsWithIgnoreCase(filename, ".vorbis") || endsWithIgnoreCase(filename, ".wav");
 }
 
 // ==========================================
 // NEW: Recursive Directory Scanner that SAVES TO FILE
 // ==========================================
-void generatePlaylistFile(fs::FS &sourceFs, const char *dirname, uint8_t levels) {
-  File playlist = LittleFS.open(PLAYLIST_FILE, FILE_WRITE);
-  if (!playlist) {
-    log_e("Failed to open LittleFS playlist file for writing!");
-    return;
-  }
-
-  // 2. Start SD Card Scan
-  log_d("Scanning directory: %s", dirname);
-
-  File root = sourceFs.open(dirname);
-  if (!root) {
-    log_d("Failed to open directory");
-    playlist.close();
-    return;
-  }
-  if (!root.isDirectory()) {
-    log_d("Not a directory");
-    root.close();
-    playlist.close();
-    return;
-  }
-  int count = 0;
-  // Define an internal recursive function (or refactor to pass File& to the original)
-  std::function<void(fs::FS &, const char *, uint8_t)> recursiveScanner = [&](fs::FS &fs, const char *dirName, uint8_t level) {
-    File dir = fs.open(dirName);
-    if (!dir || !dir.isDirectory()) return;
-
-    File entry = dir.openNextFile();
-    while (entry) {
-      if (entry.isDirectory()) {
-
-        String dirEntryName = entry.name();
-        // --- NEW: Filter out System and Trash Directories ---
-        if (dirEntryName.equalsIgnoreCase(".Trashes") || // macOS/Linux Trash
-            dirEntryName.equalsIgnoreCase("$RECYCLE.BIN") || // Windows Trash
-            dirEntryName.startsWith(".") // General hidden/system folders
-        ) {
-          log_d("Skipping system directory: %s", dirEntryName.c_str());
-        }
-        // --- END FILTER ---
-        else if (level > 0) {
-          String newPath = String(dirName);
-          if (!newPath.endsWith("/")) newPath += "/";
-          newPath += entry.name();
-          recursiveScanner(fs, newPath.c_str(), level - 1);
-        }
-      } else {
-        if (isAudioFile(entry.name())) {
-          String fullFilePath = String(dirName);
-          if (!fullFilePath.endsWith("/")) fullFilePath += "/";
-          fullFilePath += entry.name();
-
-          playlist.println(fullFilePath); // Write to LittleFS file
-          count++;
-          log_d("%d - %s", count, fullFilePath.c_str());
-        }
-      }
-      entry.close();
-      entry = dir.openNextFile();
+static void scanDirRecursive(
+    fs::FS &fs,
+    const char *currentDir,
+    uint8_t level,
+    File &playlist,
+    char *pathBuf,
+    size_t pathBufSize
+) {
+    File dir = fs.open(currentDir);
+    if (!dir || !dir.isDirectory()) {
+        return;
     }
+
+    File entry;
+    while ((entry = dir.openNextFile())) {
+
+        const char *entryName = entry.name();
+
+        if (entry.isDirectory()) {
+
+            // Skip hidden/system directories
+            if (entryName[0] != '.' && level > 0) {
+                int n = snprintf(
+                    pathBuf,
+                    pathBufSize,
+                    "%s/%s",
+                    currentDir,
+                    entryName
+                );
+
+                if (n > 0 && n < (int)pathBufSize) {
+                    scanDirRecursive(fs, pathBuf, level - 1, playlist, pathBuf, pathBufSize);
+                }
+            }
+
+        } else {
+            if (isAudioFile(entryName)) {
+                int n = snprintf(
+                    pathBuf,
+                    pathBufSize,
+                    "%s/%s",
+                    currentDir,
+                    entryName
+                );
+
+                if (n > 0 && n < (int)pathBufSize) {
+                    playlist.println(pathBuf);
+                    log_d("Add: %s", pathBuf);
+                }
+            }
+        }
+
+        entry.close();
+        vTaskDelay(1); // yield to avoid WDT
+    }
+
     dir.close();
-    vTaskDelay(1); // Yield to avoid watchdog reset
-  };
-  // Perform the scan
-  recursiveScanner(sourceFs, dirname, levels);
-  playlist.close();
-  log_d("Playlist file generation complete.");
+}
+//create music_playlist.txt
+void generatePlaylistFile(fs::FS &sourceFs, const char *dirname, uint8_t levels) {
+
+    File playlist = LittleFS.open(PLAYLIST_FILE, FILE_WRITE);
+    if (!playlist) {
+        log_e("Failed to open playlist file for writing!");
+        return;
+    }
+
+    // Allocate ONE buffer (PSRAM is fine)
+    char *pathBuf = (char*)heap_caps_malloc(PATH_BUF_LEN, MALLOC_CAP_SPIRAM);
+    if (!pathBuf) {
+        log_e("Failed to allocate path buffer");
+        playlist.close();
+        return;
+    }
+
+    log_d("Scanning directory: %s", dirname);
+
+    scanDirRecursive(
+        sourceFs,
+        dirname,
+        levels,
+        playlist,
+        pathBuf,
+        PATH_BUF_LEN
+    );
+    heap_caps_free(pathBuf);
+    playlist.close();
+    log_d("Playlist file %s generation complete.", PLAYLIST_FILE);
 }
 
 // ==========================================
@@ -220,7 +237,7 @@ void generatePlaylistFile(fs::FS &sourceFs, const char *dirname, uint8_t levels)
 int getTrackCount() {
   File playlist = LittleFS.open(PLAYLIST_FILE, FILE_READ);
   if (!playlist) {
-    log_w("Failed to open playlist file.");
+    log_w("Failed to open playlist file: %s",PLAYLIST_FILE);
     return 0;
   }
 
@@ -236,56 +253,63 @@ int getTrackCount() {
 // ==========================================
 // NEW: Low-RAM function to read a track path by index (line number)
 // ==========================================
-String getTrackPath(int index) {
+bool getTrackPath(int index, char *outBuf, size_t outBufSize) {
+  if (!outBuf || outBufSize == 0) return false;
+
   File playlist = LittleFS.open(PLAYLIST_FILE, FILE_READ);
   if (!playlist) {
     log_w("Failed to open playlist file.");
-    return "";
+    outBuf[0] = '\0';
+    return false;
   }
 
-  String path = "";
   int lineCount = 0;
-  // Iterate until we find the target index (line number)
+  size_t len = 0;
+
   while (playlist.available()) {
-    path = playlist.readStringUntil('\n');
-    if (lineCount == index) {
-      // Found the line, stop reading
-      break;
+    len = playlist.readBytesUntil('\n', outBuf, outBufSize - 1);
+    outBuf[len] = '\0';
+
+    // Strip trailing CR (\r)
+    if (len > 0 && outBuf[len - 1] == '\r') {
+      outBuf[len - 1] = '\0';
     }
+
+    if (lineCount == index) {
+      playlist.close();
+      return true;
+    }
+
     lineCount++;
   }
+
   playlist.close();
-  // Clean up carriage return
-  if (path.length() > 0 && path[path.length() - 1] == '\r') {
-    path.remove(path.length() - 1);
-  }
-
-  return path;
+  outBuf[0] = '\0';
+  return false; // index not found
 }
-
 
 // The dedicated SD Scan Task
 void scan_music_task(void *pvParameters) {
-   TaskHandle_t self = scanMusicTask;
-   
+  TaskHandle_t self = scanMusicTask;
+
   if (!SD.begin(SD_CS, SPI)) {
     log_w("X Card Mount Failed");
-    updateSDCARDStatus(LV_SYMBOL_CLOSE " Card Mount Failed",0x777777);
+    updateSDCARDStatus(LV_SYMBOL_CLOSE " Card Mount Failed", 0x777777);
     trackListLength = 0;
-    
+
   } else {
 
-  log_d("Indexing music library, please wait...");
-  updateSDCARDStatus("Indexing music library, please wait...",0x00FF00);
-  generatePlaylistFile(SD, "/", 5); // 2. Perform the blocking work: Scan and WRITE to LittleFS
-  trackListLength = getTrackCount(); // 3. Update the global track count by counting lines in the new file
-  char buffer[100];
-  snprintf(buffer, sizeof(buffer), LV_SYMBOL_AUDIO " Found %d songs.", trackListLength);
-  updateSDCARDStatus(buffer,0x00FF00);
-  log_d("%s", buffer);
+    log_d("Indexing music library, please wait...");
+    updateSDCARDStatus("Indexing music library, please wait...", 0x00FF00);
+    generatePlaylistFile(SD, "/", 5); // 2. Perform the blocking work: Scan and WRITE to LittleFS
+    trackListLength = getTrackCount(); // 3. Update the global track count by counting lines in the new file
+    char buffer[100];
+    snprintf(buffer, sizeof(buffer), LV_SYMBOL_AUDIO " Found %d songs.", trackListLength);
+    updateSDCARDStatus(buffer, 0x00FF00);
+    log_d("%s", buffer);
 
-  UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
-  log_d("{ Task stack remaining MIN: %u bytes }", hwm);
+    UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
+    log_d("{ Task stack remaining MIN: %u bytes }", hwm);
   }
   scanMusicTask = NULL;
   vTaskDelete(self);
@@ -312,65 +336,90 @@ void initSongList() {
 
 //------------------- Streaming Radio ----------------------------------
 // load station list from files "stations.csv" or default
-radios stations[50];
+radios stations[MAX_STATION_LIST_LENGTH];
 int16_t stationIndex = 0;
 uint8_t stationListLength = 0;
 
 // default stations list
-static const char defaultStationsCSV[] PROGMEM = "Always Christmas Radio,http://185.33.21.112:80/christmas_128\n"
-                                                 "Klassik Radio,http://stream.klassikradio.de/christmas/mp3-128/radiode\n"
-                                                 "Chou Chou,http://stream1.10223.cc:8025/chouchou_ch\n"
-                                                 "Smooth Loungue,http://smoothjazz.cdnstream1.com/2586_128.mp3\n"
-                                                 "Solo Piano Radio,http://pianosolo.streamguys.net/live\n"
-                                                 "Muddy's Music Cafe,http://muddys.digistream.info:20398\n"
-                                                 "Got Radio,http://206.217.213.235:8040/\n"
-                                                 "Chill Step,http://chillstep.info:1984/listen.mp3\n"
-                                                 "Cinemix,http://kathy.torontocast.com:1190/stream\n"
-                                                 "Radionomy,http://listen.radionomy.com:80/InstrumentalBreezes\n"
-                                                 "Slow Radio,http://stream3.slowradio.com:80\n"
-                                                 "Baroque,http://strm112.1.fm/baroque_mobile_mp3\n"
-                                                 "Top Radio FM93.5,http://a10.asurahosting.com:8250/radio.mp3?refresh=1751553164542\n";
+const char defaultStationsCSV[] PROGMEM = "Always Christmas Radio,http://185.33.21.112:80/christmas_128\n"
+                                          "Klassik Radio,http://stream.klassikradio.de/christmas/mp3-128/radiode\n"
+                                          "Chou Chou,http://stream1.10223.cc:8025/chouchou_ch\n"
+                                          "Smooth Loungue,http://smoothjazz.cdnstream1.com/2586_128.mp3\n"
+                                          "Solo Piano Radio,http://pianosolo.streamguys.net/live\n"
+                                          "Muddy's Music Cafe,http://muddys.digistream.info:20398\n"
+                                          "Got Radio,http://206.217.213.235:8040/\n"
+                                          "Chill Step,http://chillstep.info:1984/listen.mp3\n"
+                                          "Cinemix,http://kathy.torontocast.com:1190/stream\n"
+                                          "Radionomy,http://listen.radionomy.com:80/InstrumentalBreezes\n"
+                                          "Slow Radio,http://stream3.slowradio.com:80\n"
+                                          "Baroque,http://strm112.1.fm/baroque_mobile_mp3\n"
+                                          "Top Radio FM93.5,http://a10.asurahosting.com:8250/radio.mp3?refresh=1751553164542\n";
 
-void parseCSVLine(const String &line, String &name, String &url) {
-  int https = line.indexOf("https");
-  if (https >= 0) {
-     stationListLength--;
-     return;//skip https, allow only http
+bool parseCSVLine(const char *line, char *name, size_t nameSize, char *url, size_t urlSize) {
+  if (!line || !name || !url) return false;
+
+  // Skip https streams
+  if (strstr(line, "https://") != NULL) {
+    return false;
   }
-  int comma = line.indexOf(',');//not found comma
-  if (comma < 0) return;
-  
-  name = line.substring(0, comma);
-  url = line.substring(comma + 1);
+
+  const char *comma = strchr(line, ',');
+  if (!comma) return false;
+
+  // Copy station name
+  size_t nameLen = comma - line;
+  if (nameLen >= nameSize) nameLen = nameSize - 1;
+  memcpy(name, line, nameLen);
+  name[nameLen] = '\0';
+
+  // Copy URL (strip CR/LF)
+  const char *urlStart = comma + 1;
+  size_t urlLen = strcspn(urlStart, "\r\n");
+  if (urlLen >= urlSize) urlLen = urlSize - 1;
+  memcpy(url, urlStart, urlLen);
+  url[urlLen] = '\0';
+
+  return true;
 }
 
 // load station list from littleFS or default
 void loadStationList() {
   stationListLength = 0;
   lv_textarea_set_text(ui_MainMenu_Textarea_stationList, "");
+
+  char *lineBuf = (char *)heap_caps_malloc(LINE_BUF_LEN, MALLOC_CAP_SPIRAM);
+  size_t lineLen = 0;
+
   if (!LittleFS.exists(STATION_LIST_FILENAME)) {
-    // Load from default PROGMEM
+    // ---------- LOAD DEFAULT (PROGMEM) ----------
     lv_textarea_add_text(ui_MainMenu_Textarea_stationList, LV_SYMBOL_FILE " Load DEFAULT " MACRO_TO_STRING(STATION_LIST_FILENAME) "\n");
     log_d("Load DEFAULT %s", STATION_LIST_FILENAME);
 
-    // PROGMEM → RAM buffer reading
-    char c;
-    String line = "";
     for (uint32_t i = 0; i < strlen_P(defaultStationsCSV); i++) {
-      c = pgm_read_byte_near(defaultStationsCSV + i);
-      if (c == '\n') {
-        if (line.length() > 3) {
-          parseCSVLine(line, stations[stationListLength].name, stations[stationListLength].url);
+      char c = pgm_read_byte_near(defaultStationsCSV + i);
+
+      if (c == '\n' || lineLen >= LINE_BUF_LEN - 1) {
+        lineBuf[lineLen] = '\0';
+
+        if (stationListLength < MAX_STATION_LIST_LENGTH && parseCSVLine(lineBuf, stations[stationListLength].name, sizeof(stations[stationListLength].name), stations[stationListLength].url, sizeof(stations[stationListLength].url))) {
           stationListLength++;
         }
-        line = "";
+        lineLen = 0;
       } else {
-        line += c;
+        lineBuf[lineLen++] = c;
+      }
+    }
+
+    // Handle last line (no trailing newline)
+    if (lineLen > 0 && stationListLength < MAX_STATION_LIST_LENGTH) {
+      lineBuf[lineLen] = '\0';
+      if (parseCSVLine(lineBuf, stations[stationListLength].name, sizeof(stations[stationListLength].name), stations[stationListLength].url, sizeof(stations[stationListLength].url))) {
+        stationListLength++;
       }
     }
 
   } else {
-    // Load from user CSV in LittleFS
+    // ---------- LOAD USER CSV (LittleFS) ----------
     lv_textarea_add_text(ui_MainMenu_Textarea_stationList, LV_SYMBOL_FILE " Load USER " MACRO_TO_STRING(STATION_LIST_FILENAME) "\n");
     log_d("Load USER " MACRO_TO_STRING(STATION_LIST_FILENAME));
 
@@ -380,27 +429,29 @@ void loadStationList() {
       return;
     }
 
-    while (f.available() && stationListLength < 50) {
-      String line = f.readStringUntil('\n');
-      line.trim();
-      if (line.length() == 0) continue;
+    while (f.available() && stationListLength < MAX_STATION_LIST_LENGTH) {
+      lineLen = f.readBytesUntil('\n', lineBuf, LINE_BUF_LEN - 1);
+      lineBuf[lineLen] = '\0';
 
-      parseCSVLine(line, stations[stationListLength].name, stations[stationListLength].url);
-      stationListLength++;
+      if (lineLen == 0) continue;
+
+      if (parseCSVLine(lineBuf, stations[stationListLength].name, sizeof(stations[stationListLength].name), stations[stationListLength].url, sizeof(stations[stationListLength].url))) {
+        stationListLength++;
+      }
     }
-
     f.close();
   }
 
-  // Print summary
+  // ---------- PRINT SUMMARY ----------
+  char txt[96];
   for (int i = 0; i < stationListLength; i++) {
-    String txt = String(i + 1) + ": " + stations[i].name + "\n";
-    lv_textarea_add_text(ui_MainMenu_Textarea_stationList, txt.c_str());
+    snprintf(txt, sizeof(txt), "%d: %s\n", i + 1, stations[i].name);
+    lv_textarea_add_text(ui_MainMenu_Textarea_stationList, txt);
   }
-  char summer[100];;
-  snprintf(summer, sizeof(summer), "Total %d stations", stationListLength);
-  lv_textarea_add_text(ui_MainMenu_Textarea_stationList, summer);
-  log_d("%s", summer);
+
+  snprintf(txt, sizeof(txt), "Total %d stations", stationListLength);
+  lv_textarea_add_text(ui_MainMenu_Textarea_stationList, txt);
+  log_d("%s", txt);
 }
 
 // copy file 'stations.csv' to littleFS
@@ -417,13 +468,13 @@ bool copyStationsCSV_SD_to_LittleFS() {
   }
   File src = SD.open(STATION_LIST_FILENAME, "r");
   if (!src) {
-    log_w("Cannot open %s on SD",STATION_LIST_FILENAME);
+    log_w("Cannot open %s on SD", STATION_LIST_FILENAME);
     return false;
   }
   // --- Open destination file in LittleFS ---
   File dst = LittleFS.open(STATION_LIST_FILENAME, "w");
   if (!dst) {
-    log_w("Cannot create %s in LittleFS",STATION_LIST_FILENAME);
+    log_w("Cannot create %s in LittleFS", STATION_LIST_FILENAME);
     src.close();
     return false;
   }
@@ -436,6 +487,6 @@ bool copyStationsCSV_SD_to_LittleFS() {
   }
   src.close();
   dst.close();
-  log_d("%s copied from SD → LittleFS",STATION_LIST_FILENAME);
+  log_d("%s copied from SD → LittleFS", STATION_LIST_FILENAME);
   return true;
 }

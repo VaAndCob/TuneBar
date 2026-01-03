@@ -1,5 +1,6 @@
 #ifndef LCD_BL_PWM_BSP_H
 #define LCD_BL_PWM_BSP_H
+#include <stdint.h>
 
 
 

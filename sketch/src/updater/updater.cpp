@@ -1,3 +1,4 @@
+#include "lcd_bl_bsp/lcd_bl_pwm_bsp.h"
 #include "network/network.h"
 #include "ui/ui.h"
 #include <Arduino.h>
@@ -8,10 +9,9 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <esp_ota_ops.h>
-#include "lcd_bl_bsp/lcd_bl_pwm_bsp.h"
 
 const char *compile_date = __DATE__ " - " __TIME__;
-const char *current_version = "1.1.0";
+const char *current_version = "1.1.99";
 
 bool firmware_checked = false; // check firmware flag
 
@@ -160,10 +160,12 @@ static void ota_set_btn_label_async(const char *txt) {
 /* ========== OTA TASK ========== */
 void ota_task(void *param) {
   ota_set_message_async(LV_SYMBOL_REFRESH " Starting update...");
+  vTaskSuspend(wifiTaskHandle); // suspend wifi connection task
+  vTaskDelay(pdMS_TO_TICKS(200));
 
   const char *firmwareURL = "https://vaandcob.github.io/webpage/firmware/tunebar/tunebar.bin";
 
-  uint8_t temp_screen_off_delay = SCREEN_OFF_DELAY;//force turn screen on
+  uint32_t temp_screen_off_delay = SCREEN_OFF_DELAY; // force turn screen on
   SCREEN_OFF_DELAY = 0;
 
   ota_abort = false;
@@ -186,7 +188,7 @@ void ota_task(void *param) {
     httpCode = otaHttp.GET();
     if (httpCode != HTTP_CODE_OK) {
       char msg[96];
-      snprintf(msg, sizeof(msg), LV_SYMBOL_WARNING " Update failed: HTTP error %d", httpCode);
+      snprintf(msg, sizeof(msg), LV_SYMBOL_WARNING " Update failed: %s", HTTPClient::errorToString(httpCode).c_str());
       ota_set_message_async(msg);
       ok = false;
     }
@@ -225,7 +227,10 @@ void ota_task(void *param) {
       ota_set_progress_async(pct, buf);
     });
 
-    uint8_t buff[512];
+    uint8_t otaBuf[512];
+
+    // uint8_t *otaBuf = (uint8_t *)heap_caps_malloc(2048, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+
     uint32_t lastData = millis();
     size_t written = 0;
 
@@ -235,11 +240,12 @@ void ota_task(void *param) {
 
       if (avail) {
         size_t toRead = avail;
-        if (toRead > sizeof(buff)) toRead = sizeof(buff);
+        if (toRead > sizeof(otaBuf)) toRead = sizeof(otaBuf);
 
-        int c = stream->readBytes(buff, toRead);
+        int c = stream->readBytes(otaBuf, toRead);
+
         if (c > 0) {
-          Update.write(buff, c);
+          Update.write(otaBuf, c);
           written += c;
           lastData = millis();
         }
@@ -265,28 +271,32 @@ void ota_task(void *param) {
         ok = false;
         break;
       }
-      vTaskDelay(pdMS_TO_TICKS(1));
+      vTaskDelay(pdMS_TO_TICKS(4));
     }
   }
 
   if (ok && Update.end(true)) {
-    ota_set_message_async(LV_SYMBOL_OK " Update success: Rebooting…");
+    ota_set_message_async(LV_SYMBOL_OK " Update success: Rebooting");
     esp_ota_mark_app_valid_cancel_rollback();
     vTaskDelay(pdMS_TO_TICKS(800));
     esp_restart();
-  }  else {
-     ota_set_btn_label_async(LV_SYMBOL_DOWNLOAD " Update");
+  } else {
+    ota_set_btn_label_async(LV_SYMBOL_DOWNLOAD " Update");
   }
 
-  Update.onProgress(nullptr);//update callback
+  Update.onProgress(nullptr); // update callback
 
   if (Update.isRunning()) {
     Update.abort();
     Update.end(false);
   }
+  otaHttp.end();
+  otaClient.stop();
 
-  otaHttp.end(); 
-  SCREEN_OFF_DELAY = temp_screen_off_delay;//set screen timer back
+  vTaskDelay(pdMS_TO_TICKS(300));
+  vTaskResume(wifiTaskHandle); // resume wifi connect task
+
+  SCREEN_OFF_DELAY = temp_screen_off_delay; // set screen timer back
   BL_OFF = true;
   otaTaskHandle = NULL;
   vTaskDelete(NULL);
@@ -310,10 +320,10 @@ void ota_show_popup() {
 
   // make popup
   ota_popup = lv_obj_create(lv_layer_top());
-  lv_obj_set_size(ota_popup, 400, LV_VER_RES);
+  lv_obj_set_size(ota_popup, 350, LV_VER_RES);
   lv_obj_center(ota_popup);
-  lv_obj_set_style_radius(ota_popup, 18, 0);
-  lv_obj_set_style_pad_all(ota_popup, 8, 0);
+  lv_obj_set_style_radius(ota_popup, 15, 0);
+  lv_obj_set_style_pad_all(ota_popup, 5, 0);
   lv_obj_t *title = lv_label_create(ota_popup);
   lv_label_set_text(title, "Firmware Update");
   lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
@@ -322,11 +332,11 @@ void ota_show_popup() {
   //----------- message --------------
   ota_msg = lv_label_create(ota_popup);
   lv_label_set_text(ota_msg, "Click Update to start");
-  lv_obj_align(ota_msg, LV_ALIGN_TOP_MID, 0, 34);
+  lv_obj_align(ota_msg, LV_ALIGN_TOP_MID, 0, 40);
   lv_obj_set_style_text_font(ota_msg, &lv_font_montserrat_18, 0);
   // ---------- CLOSE (X) BUTTON ----------
   btn_close = lv_btn_create(ota_popup);
-  lv_obj_set_size(btn_close, 48, 48);
+  lv_obj_set_size(btn_close, 36, 36);
   lv_obj_align(btn_close, LV_ALIGN_TOP_RIGHT, 0, 0);
   lv_obj_t *lbl_x = lv_label_create(btn_close);
   lv_label_set_text(lbl_x, LV_SYMBOL_CLOSE);
@@ -347,7 +357,7 @@ void ota_show_popup() {
   // Progress bar
   ota_bar = lv_bar_create(ota_popup);
   lv_obj_set_size(ota_bar, 280, 12);
-  lv_obj_align(ota_bar, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_align(ota_bar, LV_ALIGN_CENTER, 0, 5);
   lv_bar_set_range(ota_bar, 0, 100);
   // Update button
   lv_obj_t *btn_update = lv_btn_create(ota_popup);
@@ -366,7 +376,7 @@ void ota_show_popup() {
         if (otaTaskHandle == NULL) {
           lv_obj_add_flag(btn_close, LV_OBJ_FLAG_HIDDEN);
           lv_label_set_text(lbl_update, LV_SYMBOL_CLOSE " Abort & Reboot");
-          //begin OTA Task
+          // begin OTA Task
           xTaskCreatePinnedToCore(ota_task, "ota_task", 6 * 1024, NULL, 4, &otaTaskHandle, 1);
         } else {
           lv_label_set_text(ota_msg, "Update aborted. Rebooting...");
@@ -375,13 +385,56 @@ void ota_show_popup() {
       },
       LV_EVENT_CLICKED, lbl_update);
 
-  // swap
+  // swap blind panel on the top
   lv_obj_set_parent(ui_Utility_Panel_blindPanel, lv_layer_top());
   lv_obj_move_foreground(ui_Utility_Panel_blindPanel);
 }
-//-------------  Functions to show
 
-// memory and system info
+// Notify update message box ppopup
+void notifyUpdate(const char *latestVer) {
+  static uint32_t prev_screen_delay; // static storage (safe lifetime)
+  prev_screen_delay = SCREEN_OFF_DELAY; // assign current delay time
+  SCREEN_OFF_DELAY = 0;
+
+  char title[48];
+  snprintf(title, sizeof(title), LV_SYMBOL_REFRESH " New Update Available %s", latestVer);
+  char *title_copy = strdup(title);
+
+  lv_obj_t *msgBox = lv_msgbox_create(NULL, title_copy, "To update firmware, please click\nUtilities -> System Information", NULL, true);
+
+  lv_obj_set_width(msgBox, 420);
+  lv_obj_center(msgBox);
+  lv_obj_t *titleObj = lv_msgbox_get_title(msgBox);
+  lv_obj_t *textObj = lv_msgbox_get_text(msgBox);
+  lv_obj_t *closeBtn = lv_msgbox_get_close_btn(msgBox);
+  lv_obj_set_style_text_font(titleObj, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_font(textObj, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_font(closeBtn, &lv_font_montserrat_28, 0);
+  lv_obj_set_size(closeBtn, 48, 48);
+  lv_obj_clear_flag(ui_Utility_Button_UpdateFirmware, LV_OBJ_FLAG_HIDDEN);
+
+  lv_obj_add_event_cb(
+      closeBtn,
+      [](lv_event_t *e) {
+        uint32_t *prev = (uint32_t *)lv_event_get_user_data(e);
+        if (!prev) return;
+        SCREEN_OFF_DELAY = *prev; // restore delay time
+        BL_OFF = false;
+        SCREEN_OFF_TIMER = millis();//reset screenoff timer
+      },
+      LV_EVENT_RELEASED, // ✅ IMPORTANT: use LV_EVENT_RELEASED
+      &prev_screen_delay);
+  // Free title_copy when msgbox is deleted
+  lv_obj_add_event_cb(
+      msgBox,
+      [](lv_event_t *e) {
+        char *title = (char *)lv_event_get_user_data(e);
+        if (title) free(title);
+      },
+      LV_EVENT_DELETE, title_copy);
+}
+
+//-----  Functions to show memory and system info
 void memoryInfo(char *buf, size_t len) {
   size_t ifree = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
   size_t imin = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);

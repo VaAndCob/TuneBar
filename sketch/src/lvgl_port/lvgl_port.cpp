@@ -1,5 +1,5 @@
-#include "user_config.h"
 #include "lvgl_port.h"
+#include "axs15231b/esp_lcd_axs15231b.h"
 #include "driver/spi_master.h"
 #include "esp32-hal.h"
 #include "esp_err.h"
@@ -10,13 +10,13 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "lvgl.h"
-#include "axs15231b/esp_lcd_axs15231b.h"
 #include "i2c_bsp/i2c_bsp.h"
+#include "lvgl.h"
+#include "user_config.h"
 
-#include "ui/ui.h"
+#include "esp_task_wdt.h"
 #include "task_msg/task_msg.h"
-
+#include "ui/ui.h"
 
 #define LCD_BIT_PER_PIXEL (16)
 
@@ -125,29 +125,29 @@ static void WAVESHARE_349_lvgl_unlock(void) {
   xSemaphoreGive(lvgl_mux);
 }
 
-//##########################################################
-
+// ##########################################################
 
 void WAVESHARE_349_lvgl_port_task(void *arg) {
 
   const TickType_t minDelay = pdMS_TO_TICKS(WAVESHARE_349_LVGL_TASK_MIN_DELAY_MS);
   const TickType_t maxDelay = pdMS_TO_TICKS(WAVESHARE_349_LVGL_TASK_MAX_DELAY_MS);
+ 
+  esp_task_wdt_add(NULL); // Register *this* task
 
   for (;;) {
-    // 1. Handle UI messages
     process_ui_status_queue();
 
-    TickType_t delayTicks = minDelay;
-    if (WAVESHARE_349_lvgl_lock(10)) // try mutex for 10ms
-    {
-      uint32_t next = lv_timer_handler(); // already in ms
+    if (WAVESHARE_349_lvgl_lock(10)) {
+      esp_task_wdt_reset();
+      uint32_t next = lv_timer_handler();
+      esp_task_wdt_reset();
       WAVESHARE_349_lvgl_unlock();
-      // next is in ms -> convert once to ticks
-      delayTicks = pdMS_TO_TICKS(next);
-      if (delayTicks < minDelay) delayTicks = minDelay;
-      if (delayTicks > maxDelay) delayTicks = maxDelay;
+      if (next < WAVESHARE_349_LVGL_TASK_MIN_DELAY_MS) next = WAVESHARE_349_LVGL_TASK_MIN_DELAY_MS;
+      if (next > WAVESHARE_349_LVGL_TASK_MAX_DELAY_MS) next = WAVESHARE_349_LVGL_TASK_MAX_DELAY_MS;
+      vTaskDelay(pdMS_TO_TICKS(next));
+    } else {
+      vTaskDelay(pdMS_TO_TICKS(10));
     }
-    vTaskDelay(delayTicks); // always allow idle task to run
   }
 }
 
@@ -257,7 +257,7 @@ void lvgl_port_init(void) {
 
   lvgl_mux = xSemaphoreCreateMutex();
   assert(lvgl_mux);
-  xTaskCreatePinnedToCore(WAVESHARE_349_lvgl_port_task, "LVGL", 12 * 1024, NULL, 5, NULL, 0); // Run Core 0
+  xTaskCreatePinnedToCore(WAVESHARE_349_lvgl_port_task, "LVGL", 6 * 1024, NULL, 5, NULL, 0); // Run Core 0
   if (WAVESHARE_349_lvgl_lock(-1)) {
 
     ui_init();

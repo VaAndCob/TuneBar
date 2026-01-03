@@ -29,7 +29,7 @@ lv_fs_res_t fs_seek(lv_fs_drv_t *drv, void *file_p, uint32_t pos);
 
 void initLittleFS();
 void initSDCard();
-String getTrackPath(int index);
+bool getTrackPath(int index, char *outBuf, size_t outBufSize);
 void scanMusic();
 void initSongList();
 
@@ -37,19 +37,23 @@ void initSongList();
 
 
 //------------ RADIO
-// 1. Define the struct normally (no 'extern' keyword needed here)
-struct radios {
-  String name;
-  String url;
-};
 
-// 2. Declare the global array and variables using 'extern'
-extern radios stations[50];
+#define MAX_STATION_LIST_LENGTH 50
+#define RADIO_NAME_LEN 64
+#define RADIO_URL_LEN  128
+#define LINE_BUF_LEN   512
+
+typedef struct {
+    char name[RADIO_NAME_LEN];
+    char url[RADIO_URL_LEN];
+} radios;
+
+extern radios stations[MAX_STATION_LIST_LENGTH];
 extern int16_t stationIndex;
 extern uint8_t stationListLength;
 extern uint8_t playMode;
 
 
+
 void loadStationList();
 bool copyStationsCSV_SD_to_LittleFS();
-

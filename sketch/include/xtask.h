@@ -4,24 +4,22 @@ All task setting  Stack size and Priority and Core
 CORE 1:
   m_audioTaskHandle = xTaskCreateStaticPinnedToCore(
         &Audio::taskWrapper, "PeriodicTask", 3300, this, 6, xAudioStack,  &xAudioTaskBuffer, 1);
-  xTaskCreatePinnedToCore(audio_loop_task, "audio_loop", 4 * 1024, NULL, 4, NULL, 1);
+  xTaskCreatePinnedToCore(audio_loop_task, "audio_loop", 6 * 1024, NULL, 4, NULL, 1);
   xTaskCreatePinnedToCore(rtc_read_task, "getDateTimeTask", 3 * 1024, NULL, 3, NULL, 1);
   xTaskCreatePinnedToCore(button_input_task, "buttonInputTask", 2 * 1024, NULL, 2, NULL, 1);
-  xTaskCreatePinnedToCore(batt_level_read_task, "readBatteryLevel", 3 * 1024, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(batt_level_read_task, "readBatteryLevel", 2 * 1024, NULL, 1, NULL, 1);
 
- xTaskCreatePinnedToCore(scan_music_task, "SD_Scan_Task", 6 * 1024, NULL, 1, NULL, 1);(create and delete)
- xTaskCreatePinnedToCore(updateWeatherPanelTask,"To update weather panel", 2 * 1024, NULL,3, NULL, 1);(create and delete)
+  xTaskCreatePinnedToCore(scan_music_task, "SD_Scan_Task", 6 * 1024, NULL, 1, NULL, 1);(create and delete)
+  xTaskCreatePinnedToCore(updateWeatherPanelTask,"To update weather panel", 2 * 1024, NULL,3, NULL, 1);(create and delete)
   xTaskCreatePinnedToCore(ota_task, "ota_task", 10 * 1024, NULL, 4, &otaTaskHandle, 1);(create and delete)
 
 CORE 0:
- xTaskCreatePinnedToCore(WAVESHARE_349_lvgl_port_task, "LVGL", 16384, NULL, 5, NULL, 0); // Run Core 0
-xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 1, &wifiTask, 0);(create and delete)
+  xTaskCreatePinnedToCore(WAVESHARE_349_lvgl_port_task, "LVGL", 6 * 1024, NULL, 5, NULL, 0); // Run Core 0
+  xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 1, &wifiTask, 0);(create and delete)
 */
 #include "file/file.h"
 #include "task_msg/task_msg.h"
 #include <LittleFS.h>
-
-
 
 //==============================================
 // BUTTON INPUT TASK:
@@ -96,7 +94,7 @@ void button_input_task(void *param) {
     }
 
     vTaskDelay(pdMS_TO_TICKS(10)); // yield CPU
-  }//for {;;}
+  } // for {;;}
 }
 
 //==============================================
@@ -184,9 +182,9 @@ static const size_t BYTES_PER_SAMPLE = 2; // 16-bit PCM
 
 static const size_t MAX_REC_SIZE = SAMPLE_RATE * CHANNELS * BYTES_PER_SAMPLE * RECORD_SECONDS;
 
-static int16_t *speech_buffer = nullptr;// persistent buffer
-static size_t speech_ptr = 0;// write cursor (bytes)
-static bool speech_ready = false;// flag says buffer is valid
+static int16_t *speech_buffer = nullptr; // persistent buffer
+static size_t speech_ptr = 0; // write cursor (bytes)
+static bool speech_ready = false; // flag says buffer is valid
 //------------------------------------
 void init_audio_buffers() {
   if (!speech_buffer) {
@@ -209,74 +207,66 @@ void playRecordedAudio() {
     return;
   }
 
-auto tx = audio.getTxHandle();
+  auto tx = audio.getTxHandle();
   if (!tx) {
     log_e("TX handle NULL");
     return;
   }
 
   // ---------- PLAYBACK ----------
-  size_t length = speech_ptr;         // bytes of valid mono audio
+  size_t length = speech_ptr; // bytes of valid mono audio
   size_t play_ptr = 0;
   size_t bytes_written = 0;
 
-  const int NUM_SAMPLES = 256;        // mono samples / block
-  static int16_t stereo_buf[NUM_SAMPLES * 2];   // stereo L/R interleaved
+  const int NUM_SAMPLES = 256; // mono samples / block
+  static int16_t stereo_buf[NUM_SAMPLES * 2]; // stereo L/R interleaved
 
   log_i("Playback start (%u bytes, stereo 16-bit)", (unsigned)length);
 
   while (play_ptr < length) {
 
-    size_t samples_left = (length - play_ptr) / 2;   // bytes→samples
+    size_t samples_left = (length - play_ptr) / 2; // bytes→samples
     size_t samples_to_send = samples_left;
 
-    if (samples_to_send > NUM_SAMPLES)
-      samples_to_send = NUM_SAMPLES;
+    if (samples_to_send > NUM_SAMPLES) samples_to_send = NUM_SAMPLES;
 
-    int16_t *mono_ptr =
-        (int16_t *)((uint8_t *)speech_buffer + play_ptr);
+    int16_t *mono_ptr = (int16_t *)((uint8_t *)speech_buffer + play_ptr);
 
     // mono → stereo copy
     for (size_t i = 0; i < samples_to_send; i++) {
       int16_t s = mono_ptr[i];
-      stereo_buf[2*i + 0] = s;   // L
-      stereo_buf[2*i + 1] = s;   // R
+      stereo_buf[2 * i + 0] = s; // L
+      stereo_buf[2 * i + 1] = s; // R
     }
 
-    esp_err_t err = i2s_channel_write(
-        tx,
-        stereo_buf,
-        samples_to_send * 4,      // 4 bytes per stereo frame
-        &bytes_written,
-        portMAX_DELAY);
+    esp_err_t err = i2s_channel_write(tx, stereo_buf,
+                                      samples_to_send * 4, // 4 bytes per stereo frame
+                                      &bytes_written, portMAX_DELAY);
 
     if (err != ESP_OK) {
       log_e("I2S write failed: %s", esp_err_to_name(err));
       break;
     }
 
-    play_ptr += samples_to_send * 2;  // mono bytes advanced
+    play_ptr += samples_to_send * 2; // mono bytes advanced
   }
 
   log_i("Playback finished (%u bytes played)", (unsigned)length);
 
-//---------------------------------
+  //---------------------------------
 
   log_i("=== PLAYBACK TEST: synthetic noise ===");
-  for (int block = 0; block < 400; block++) {  // ~2 seconds at 48k
+  for (int block = 0; block < 400; block++) { // ~2 seconds at 48k
     // generate noise
     for (int i = 0; i < NUM_SAMPLES; i++) {
       int16_t v = (rand() % 4000) - 1000;
-      stereo_buf[i*2 + 0] = v;   // L
-      stereo_buf[i*2 + 1] = v;   // R
+      stereo_buf[i * 2 + 0] = v; // L
+      stereo_buf[i * 2 + 1] = v; // R
     }
     size_t written = 0;
-    esp_err_t err = i2s_channel_write(
-        tx,
-        stereo_buf,
-        NUM_SAMPLES * 4,        // stereo, 2 bytes each → 4 bytes/frame
-        &written,
-        portMAX_DELAY);
+    esp_err_t err = i2s_channel_write(tx, stereo_buf,
+                                      NUM_SAMPLES * 4, // stereo, 2 bytes each → 4 bytes/frame
+                                      &written, portMAX_DELAY);
 
     if (err != ESP_OK) {
       log_e("I2S write failed: %s", esp_err_to_name(err));
@@ -289,7 +279,6 @@ auto tx = audio.getTxHandle();
   speech_ready = false;
   speech_ptr = 0;
 }
-
 
 /*
 void startRecording() {
@@ -337,15 +326,10 @@ void my_audio_info(Audio::msg_t m) {
   case 0: // show station title / description
   {
     if (m.e == Audio::evt_streamtitle) {
-      char txt[256];   // pick a big enough buffer
-      snprintf(txt,sizeof(txt),"%s\n%s",stations[stationIndex].name, m.msg);
-      msg = {
-          .type = STATUS_UPDATE_TRACK_DESC_SET,
-      };
-      strncpy(msg.trackDesc, txt, sizeof(msg.trackDesc) - 1);
-      msg.trackDesc[sizeof(msg.trackDesc) - 1] = '\0';
+      msg.type = STATUS_UPDATE_TRACK_DESC_SET;
+      snprintf(msg.trackDesc, sizeof(msg.trackDesc), "%s\n%s", stations[stationIndex].name, m.msg);
       xQueueSend(ui_status_queue, &msg, 100); // send message
-      log_i("%s", msg.trackDesc);
+      log_i("%s", m.msg);
     }
     break;
   }
@@ -353,13 +337,8 @@ void my_audio_info(Audio::msg_t m) {
   {
     if (m.e == Audio::evt_id3data) {
       if (strstr(m.msg, "Title") || strstr(m.msg, "Artist") || strstr(m.msg, "Album")) {
-        char txt[256];   // pick a big enough buffer
-        snprintf(txt,sizeof(txt),"%s\n", m.msg);
-        msg = {
-            .type = STATUS_UPDATE_TRACK_DESC_ADD,
-        };
-        strncpy(msg.trackDesc, txt, sizeof(msg.trackDesc) - 1);
-        msg.trackDesc[sizeof(msg.trackDesc) - 1] = '\0';
+        msg.type = STATUS_UPDATE_TRACK_DESC_ADD;
+        snprintf(msg.trackDesc, sizeof(msg.trackDesc), "%s\n", m.msg);
         xQueueSend(ui_status_queue, &msg, 100); // send message
         log_i("%s", msg.trackDesc);
       }
@@ -387,7 +366,6 @@ void audio_loop_task(void *param) {
   int16_t stereo_temp[stereo_chunk_bytes / 2]; // Buffer ชั่วคราวรับ Stereo
   size_t bytes_read = 0;
 
-
   UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
   log_w("{ Task stack remaining MIN: %u bytes }", hwm);
 
@@ -413,10 +391,8 @@ void audio_loop_task(void *param) {
                    .type = STATUS_UPDATE_PLAY_POSITION,
                    .current_pos = current_pos,
                    .total = current_total};
-            strncpy(msg.elapse_buf, elapse_buf, sizeof(msg.elapse_buf) - 1);
-            msg.elapse_buf[sizeof(msg.elapse_buf) - 1] = '\0';
-            strncpy(msg.remain_buf, remain_buf, sizeof(msg.remain_buf) - 1);
-            msg.remain_buf[sizeof(msg.remain_buf) - 1] = '\0';
+            snprintf(msg.elapse_buf, sizeof(msg.elapse_buf), "%s", elapse_buf);
+            snprintf(msg.remain_buf, sizeof(msg.remain_buf), "%s", remain_buf);
             xQueueSend(ui_status_queue, &msg, 100); // send message
           }
           // track not 0 length
@@ -452,26 +428,20 @@ void audio_loop_task(void *param) {
               }
               // switch
               //  update track index
-              snprintf(status_buffer, sizeof(status_buffer), "%d of %d", trackIndex + 1, trackListLength);
-              msg = {
-                  .type = STATUS_UPDATE_TRACK_NUMBER,
-              };
-              strncpy(msg.trackNumber, status_buffer, sizeof(msg.trackNumber) - 1);
-              msg.trackNumber[sizeof(msg.trackNumber) - 1] = '\0';
+              msg.type = STATUS_UPDATE_TRACK_NUMBER;
+               snprintf(msg.trackNumber, sizeof(msg.trackNumber), "%d of %d", trackIndex + 1, trackListLength);
               xQueueSend(ui_status_queue, &msg, 100); // send message
 
               // play track
-              const char *trackpath = getTrackPath(trackIndex).c_str();
-              msg = {
-                  .type = STATUS_UPDATE_TRACK_DESC_SET,
-              };
-              if (!audio.connecttoFS(SD, trackpath)) {
-                log_e("Failed to open file: %s", trackpath);
-                strncpy(msg.trackDesc, "Cannot access music.\nPlease check the SD Card.\nOr Update music library.", sizeof(msg.trackDesc) - 1);
+              char trackPath[512];
+              getTrackPath(trackIndex, trackPath, sizeof(trackPath));
+              msg.type = STATUS_UPDATE_TRACK_DESC_SET;
+              if (!audio.connecttoFS(SD, trackPath)) {
+                log_e("Failed to open file: %s", trackPath);
+                snprintf(msg.trackDesc, sizeof(msg.trackDesc),  "Cannot access music.\nPlease check the SD Card.\nOr Update music library.");
               } else {
-                strncpy(msg.trackDesc, "", sizeof(msg.trackDesc) - 1);
+                snprintf(msg.trackDesc, sizeof(msg.trackDesc), "");
               }
-              msg.trackDesc[sizeof(msg.trackDesc) - 1] = '\0';
               xQueueSend(ui_status_queue, &msg, 100); // send message
             } // detect end of track -> next track
           } // not empty track
@@ -483,83 +453,75 @@ void audio_loop_task(void *param) {
       vTaskDelay(1);
     }
 
-
-
     // ---------RECORD MODE-------------------------
     else {
-  auto rx_handle = audio.getRxHandle();
-  if (!rx_handle) {
-    log_e("I2S RX Handle NULL");
-    vTaskDelay(50);
-    continue;
-  }
+      auto rx_handle = audio.getRxHandle();
+      if (!rx_handle) {
+        log_e("I2S RX Handle NULL");
+        vTaskDelay(50);
+        continue;
+      }
 
-  // allocate once
-  if (!speech_buffer) {
-    init_audio_buffers();
+      // allocate once
+      if (!speech_buffer) {
+        init_audio_buffers();
 
-    if (!speech_buffer) {
-      log_e("speech_buffer alloc failed");
-      vTaskDelay(100);
-      continue;
+        if (!speech_buffer) {
+          log_e("speech_buffer alloc failed");
+          vTaskDelay(100);
+          continue;
+        }
+      }
+
+      const size_t stereo_chunk_bytes = 512;
+      int16_t stereo_temp[stereo_chunk_bytes / 2];
+      size_t bytes_read = 0;
+
+      esp_err_t err = i2s_channel_read(rx_handle, stereo_temp, sizeof(stereo_temp), &bytes_read, pdMS_TO_TICKS(100));
+
+      // stereo_temp contains interleaved L R L R ...
+      /*
+      for (int i = 0; i < 16; i++) {   // print the first 16 samples
+          int16_t L = stereo_temp[i * 2 + 0];
+          int16_t R = stereo_temp[i * 2 + 1];
+          log_i("%d,%d\n", L, R);
+      }
+       */
+      if (err == ESP_OK && bytes_read >= 4) {
+
+        size_t frames = bytes_read / 4; // 4 bytes per stereo frame
+
+        // prevent overflow
+        if (speech_ptr + frames * 2 > MAX_REC_SIZE) {
+          log_w("Recording buffer full");
+          speech_ready = true;
+          stopRecording(speech_ptr);
+          continue;
+        }
+
+        // mono write pointer
+        int16_t *dest = speech_buffer + (speech_ptr / 2);
+
+        // copy Left only
+        for (size_t i = 0; i < frames; i++) {
+          dest[i] = stereo_temp[i * 2];
+        }
+
+        // advance in BYTES
+        speech_ptr += frames * 2;
+
+        if (speech_ptr >= MAX_REC_SIZE) {
+          speech_ready = true;
+          log_i("Buffer Full - stop");
+          stopRecording(speech_ptr);
+        }
+      } else if (err != ESP_OK) {
+        log_e("I2S Read Error: %s", esp_err_to_name(err));
+      }
+
+      vTaskDelay(1);
     }
-  }
 
-  const size_t stereo_chunk_bytes = 512;
-  int16_t stereo_temp[stereo_chunk_bytes / 2];
-  size_t bytes_read = 0;
-
-  esp_err_t err = i2s_channel_read(
-      rx_handle,
-      stereo_temp,
-      sizeof(stereo_temp),
-      &bytes_read,
-      pdMS_TO_TICKS(100));
-   
-     // stereo_temp contains interleaved L R L R ...
-/*
-for (int i = 0; i < 16; i++) {   // print the first 16 samples
-    int16_t L = stereo_temp[i * 2 + 0];
-    int16_t R = stereo_temp[i * 2 + 1];
-    log_i("%d,%d\n", L, R);
-}
- */
-  if (err == ESP_OK && bytes_read >= 4) {
-
-    size_t frames = bytes_read / 4;   // 4 bytes per stereo frame
-
-    // prevent overflow
-    if (speech_ptr + frames * 2 > MAX_REC_SIZE) {
-      log_w("Recording buffer full");
-      speech_ready = true;
-      stopRecording(speech_ptr);
-      continue;
-    }
-
-    // mono write pointer
-    int16_t *dest = speech_buffer + (speech_ptr / 2);
-
-    // copy Left only
-    for (size_t i = 0; i < frames; i++) {
-      dest[i] = stereo_temp[i * 2];
-    }
-
-    // advance in BYTES
-    speech_ptr += frames * 2;
-
-    if (speech_ptr >= MAX_REC_SIZE) {
-      speech_ready = true;
-      log_i("Buffer Full - stop");
-      stopRecording(speech_ptr);
-    }
-  }
-  else if (err != ESP_OK) {
-    log_e("I2S Read Error: %s", esp_err_to_name(err));
-  }
-
-  vTaskDelay(1);
-}
-
-//-------------------------------
+    //-------------------------------
   } // for(;;)
-}// audio loop task
+} // audio loop task

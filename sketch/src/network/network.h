@@ -9,6 +9,7 @@ struct WifiEntry {
 };
 
 extern WifiEntry wifiList[];
+extern TaskHandle_t wifiTaskHandle;
 
 int loadWifiList(WifiEntry list[]);
 void saveWifiList(WifiEntry list[], int count);

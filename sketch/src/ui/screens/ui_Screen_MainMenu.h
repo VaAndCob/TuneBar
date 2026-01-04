@@ -43,6 +43,8 @@ extern lv_obj_t *ui_MainMenu_Label_Label12;
 extern void ui_event_MainMenu_Button_NetworkScan( lv_event_t * e);
 extern lv_obj_t *ui_MainMenu_Button_NetworkScan;
 extern lv_obj_t *ui_MainMenu_Label_Label13;
+extern void ui_event_MainMenu_Switch_Wifi( lv_event_t * e);
+extern lv_obj_t *ui_MainMenu_Switch_Wifi;
 extern void ui_event_MainMenu_Tabpage_screen( lv_event_t * e);
 extern lv_obj_t *ui_MainMenu_Tabpage_screen;
 extern void ui_event_MainMenu_Dropdown_Brightness( lv_event_t * e);

@@ -23,6 +23,7 @@ WifiEntry wifiList[WIFI_MAX];
 
 byte networks = 0;
 TaskHandle_t wifiTaskHandle = NULL;
+bool wifiEnable = false;
 
 //-----------------------------------------------------------
 // Enable mbedTLS to use PSRAM for dynamic memory allocation instead of internal RAM
@@ -39,128 +40,179 @@ void enableTlsInPsram() {
   mbedtls_platform_set_calloc_free(psram_calloc, psram_free);
 }
 
-// ---------------------- LOAD WIFI LIST ----------------------
+// sanitize wifi ssid
+static void sanitize_string(char *s) {
+    if (!s) return;
+
+    char *dst = s;
+    for (char *src = s; *src; src++) {
+        uint8_t c = (uint8_t)*src;
+        if (c >= 32 && c != 127) {  // keep printable ASCII only
+            *dst++ = *src;
+        }
+    }
+    *dst = '\0';
+
+    // Trim trailing spaces
+    while (dst > s && isspace((unsigned char)dst[-1])) {
+        *--dst = '\0';
+    }
+}
+
+// compare ssid 
+static bool ssid_equals(const char *a, const char *b) {
+    if (!a || !b) return false;
+    return strcmp(a, b) == 0;
+}
+
+// load wifi credential from wifi.json
 int loadWifiList(WifiEntry list[]) {
+    if (!LittleFS.exists(WIFI_FILE)) {
+        log_w("wifi.json not found → creating empty list");
+        File f = LittleFS.open(WIFI_FILE, "w");
+        if (f) {
+            f.print("[]");
+            f.close();
+        }
+        return 0;
+    }
 
-  // Ensure wifi.json exists
-  if (!LittleFS.exists("/wifi.json")) {
-    log_w("wifi.json not found → creating empty file");
-
-    File f = LittleFS.open("/wifi.json", "w");
+    File f = LittleFS.open(WIFI_FILE, "r");
     if (!f) {
-      log_e("Failed to create wifi.json");
-      return false;
+        log_e("Failed to open wifi.json");
+        return 0;
     }
 
-    f.print("[]"); // create empty JSON array
+    static JsonDocument doc;
+    doc.clear();
+    DeserializationError err = deserializeJson(doc, f);
     f.close();
-  }
 
-  File f = LittleFS.open(WIFI_FILE, "r");
-  if (!f) return 0;
-
-  static JsonDocument doc;
-  doc.clear();
-  DeserializationError err = deserializeJson(doc, f);
-
-  f.close();
-
-  if (err) {
-    log_w("JSON parse failed → recreating file.");
-    File f2 = LittleFS.open(WIFI_FILE, "w");
-    f2.print("[]");
-    f2.close();
-    return 0;
-  }
-
-  log_d("Wi-Fi Credential List");
-  int count = doc.size();
-  if (count > WIFI_MAX) count = WIFI_MAX;
-  for (int i = 0; i < count; i++) {
-
-    const char *ssid = doc[i]["ssid"];
-    const char *password = doc[i]["password"];
-
-    if (ssid) {
-      strncpy(list[i].ssid, ssid, sizeof(list[i].ssid) - 1);
-      list[i].ssid[sizeof(list[i].ssid) - 1] = '\0';
-    } else {
-      list[i].ssid[0] = '\0';
+    if (err || !doc.is<JsonArray>()) {
+        log_w("wifi.json invalid → reset");
+        File f2 = LittleFS.open(WIFI_FILE, "w");
+        if (f2) {
+            f2.print("[]");
+            f2.close();
+        }
+        return 0;
     }
 
-    if (password) {
-      strncpy(list[i].password, password, sizeof(list[i].password) - 1);
-      list[i].password[sizeof(list[i].password) - 1] = '\0';
-    } else {
-      list[i].password[0] = '\0';
+    int count = 0;
+
+    for (JsonObject obj : doc.as<JsonArray>()) {
+        if (count >= WIFI_MAX) break;
+
+        const char *ssid = obj["ssid"];
+        const char *password = obj["password"];
+
+        if (!ssid || !*ssid) continue;
+
+        strncpy(list[count].ssid, ssid, sizeof(list[count].ssid) - 1);
+        strncpy(list[count].password, password ? password : "",sizeof(list[count].password) - 1);
+
+        list[count].ssid[sizeof(list[count].ssid) - 1] = '\0';
+        list[count].password[sizeof(list[count].password) - 1] = '\0';
+
+        sanitize_string(list[count].ssid);
+        sanitize_string(list[count].password);
+
+        log_d("WiFi[%d] SSID='%s'", count, list[count].ssid);
+        count++;
     }
-
-    char txt[128];
-    snprintf(txt, sizeof(txt), "%d: %s, %s", i + 1, list[i].ssid, list[i].password); // debug print "ssid, password
-    log_d("%s", txt);
-  }
-
-  return count;
+    return count;
 }
 
-// ---------------------- SAVE WIFI LIST ----------------------
-void saveWifiList(WifiEntry list[], int count) {
-  static JsonDocument doc;
-  doc.clear();
 
-  JsonArray arr = doc.to<JsonArray>();
+// SAVE WIFI LIST
+void saveWifiList(const WifiEntry list[], int count) {
+    static JsonDocument doc;
+    doc.clear();
+    JsonArray arr = doc.to<JsonArray>();
 
-  for (int i = 0; i < count; i++) {
-    JsonObject obj = arr.add<JsonObject>();
-    obj["ssid"] = list[i].ssid;
-    obj["password"] = list[i].password;
-  }
+    for (int i = 0; i < count; i++) {
+        if (!list[i].ssid[0]) continue;
 
-  File f = LittleFS.open(WIFI_FILE, "w");
-  if (!f) {
-    log_e("Failed to open WIFI_FILE for writing");
-    return;
-  }
-
-  serializeJson(doc, f);
-  f.close();
+        JsonObject o = arr.add<JsonObject>();
+        o["ssid"] = list[i].ssid;
+        o["password"] = list[i].password;
+    }
+    File f = LittleFS.open(WIFI_FILE, "w");
+    if (!f) {
+        log_e("Failed to write wifi.json");
+        return;
+    }
+    serializeJson(doc, f);
+    f.close();
+    log_d("Saved %d WiFi entries", count);
 }
 
-// ---------------------- ADD / UPDATE ENTRY ----------------------
-int addOrUpdateWifi(const char *ssid, const char *password, WifiEntry list[], int count) {
-  // 1) Check if SSID already exists
-  for (int i = 0; i < count; i++) {
-    if (strcmp(list[i].ssid, ssid) == 0) {
 
-      // Update password + move to top
-      for (int j = i; j > 0; j--) list[j] = list[j - 1];
-      strncpy(list[0].ssid, ssid, sizeof(list[0].ssid) - 1);
-      list[0].ssid[sizeof(list[0].ssid) - 1] = '\0';
-      strncpy(list[0].password, password, sizeof(list[0].password) - 1);
-      list[0].password[sizeof(list[0].password) - 1] = '\0';
-      return count;
+// ADD / UPDATE ENTRY
+int addOrUpdateWifi(
+    const char *newSSID,
+    const char *newPassword,
+    WifiEntry list[],
+    int count
+) {
+    if (!newSSID || !*newSSID) return count;
+
+    char ssid[64];
+    char password[64];
+
+    strncpy(ssid, newSSID, sizeof(ssid) - 1);
+    strncpy(password, newPassword ? newPassword : "", sizeof(password) - 1);
+    ssid[sizeof(ssid) - 1] = '\0';
+    password[sizeof(password) - 1] = '\0';
+
+    sanitize_string(ssid);
+    sanitize_string(password);
+
+    log_i("Adding/Updating WiFi: '%s':'%s'", ssid,password);
+
+    // 1) Find existing
+    int found = -1;
+    for (int i = 0; i < count; i++) {
+        if (ssid_equals(list[i].ssid, ssid)) {
+            found = i;
+            break;
+        }
     }
-  }
 
-  // 2) New SSID
-  if (count < WIFI_MAX) {
-    // Shift downward
-    for (int i = count; i > 0; i--) list[i] = list[i - 1];
-    strncpy(list[0].ssid, ssid, sizeof(list[0].ssid) - 1);
-    list[0].ssid[sizeof(list[0].ssid) - 1] = '\0';
-    strncpy(list[0].password, password, sizeof(list[0].password) - 1);
-    list[0].password[sizeof(list[0].password) - 1] = '\0';
-    return count + 1;
-  } else {
-    // Overwrite oldest (index 9)
-    for (int i = WIFI_MAX - 1; i > 0; i--) list[i] = list[i - 1];
-    strncpy(list[0].ssid, ssid, sizeof(list[0].ssid) - 1);
-    list[0].ssid[sizeof(list[0].ssid) - 1] = '\0';
-    strncpy(list[0].password, password, sizeof(list[0].password) - 1);
-    list[0].password[sizeof(list[0].password) - 1] = '\0';
+    // 2) Prepare new entry
+    WifiEntry entry{};
+    strncpy(entry.ssid, ssid, sizeof(entry.ssid) - 1);
+    strncpy(entry.password, password, sizeof(entry.password) - 1);
+
+    // 3) Remove old copy if exists
+    if (found >= 0) {
+        log_d("Updating existing SSID at index %d", found);
+        for (int i = found; i > 0; i--) {
+            list[i] = list[i - 1];
+        }
+        list[0] = entry;
+        return count;
+    }
+
+    // 4) New entry
+    log_d("Adding new SSID");
+
+    if (count < WIFI_MAX) {
+        for (int i = count; i > 0; i--) {
+            list[i] = list[i - 1];
+        }
+        list[0] = entry;
+        return count + 1;
+    }
+
+    // 5) List full → drop oldest
+    for (int i = WIFI_MAX - 1; i > 0; i--) {
+        list[i] = list[i - 1];
+    }
+    list[0] = entry;
     return WIFI_MAX;
-  }
 }
+
 
 // Discovery wifi network
 void scanWiFi(bool updateList) {
@@ -237,7 +289,7 @@ void scanWiFi(bool updateList) {
 }
 
 //-----------------------------------------
-// check connection status and attemp to connect every 30 second
+// wifi task -> check connection status and attemp to connect every 30 second
 void wifi_connect_task(void *param) {
 
   for (;;) {
@@ -317,7 +369,8 @@ void wifi_connect_task(void *param) {
             // check wifi connection status
             if (WiFi.status() == WL_CONNECTED) {
               char connectedMsg[128];
-              snprintf(connectedMsg, sizeof(connectedMsg), "Connected to %s (IP: %s)", networkName, WiFi.localIP());
+              IPAddress ip = WiFi.localIP();
+              snprintf(connectedMsg, sizeof(connectedMsg), "Connected to %s (IP: %u.%u.%u.%u)",  networkName, ip[0], ip[1], ip[2], ip[3]);
               log_i("%s", connectedMsg);
               updateWiFiStatus(connectedMsg, 0x00FF00, 0x0000FF);
 
@@ -341,12 +394,13 @@ void wifi_connect_task(void *param) {
         } // If we
       }
     } // wifi connected
+
     UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
     log_d("{ Task stack remaining MIN: %u bytes }", hwm);
     vTaskDelay(pdMS_TO_TICKS(30000));
   }
 }
-
+// global wifi connect
 void wifiConnect() {
   enableTlsInPsram();
   if (wifiTaskHandle == NULL) xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 1, &wifiTaskHandle, 0);

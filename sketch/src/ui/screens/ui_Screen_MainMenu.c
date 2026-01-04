@@ -5,7 +5,7 @@
 
 #include "../ui.h"
 
-lv_obj_t *ui_Screen_MainMenu = NULL;lv_obj_t *ui_MainMenu_Panel_Menu = NULL;lv_obj_t *ui_MainMenu_Image_LiveStreaming = NULL;lv_obj_t *ui_MainMenu_Image_MusicPlayer = NULL;lv_obj_t *ui_MainMenu_Image_ChatBot = NULL;lv_obj_t *ui_MainMenu_Image_Information = NULL;lv_obj_t *ui_MainMenu_Image_Utility = NULL;lv_obj_t *ui_MainMenu_Image_Config = NULL;lv_obj_t *ui_MainMenu_Tabview_ConfigPanel = NULL;lv_obj_t *ui_MainMenu_Tabpage_network = NULL;lv_obj_t *ui_MainMenu_Label_connectStatus = NULL;lv_obj_t *ui_MainMenu_Label_Label3 = NULL;lv_obj_t *ui_MainMenu_Dropdown_NetworkList = NULL;lv_obj_t *ui_MainMenu_Textarea_Password = NULL;lv_obj_t *ui_MainMenu_Button_NetworkSave = NULL;lv_obj_t *ui_MainMenu_Label_Label12 = NULL;lv_obj_t *ui_MainMenu_Button_NetworkScan = NULL;lv_obj_t *ui_MainMenu_Label_Label13 = NULL;lv_obj_t *ui_MainMenu_Tabpage_screen = NULL;lv_obj_t *ui_MainMenu_Dropdown_Brightness = NULL;lv_obj_t *ui_MainMenu_Dropdown_SleepTimer = NULL;lv_obj_t *ui_MainMenu_Dropdown_Wallpaper = NULL;lv_obj_t *ui_MainMenu_Label_Label8 = NULL;lv_obj_t *ui_MainMenu_Tabpage_station = NULL;lv_obj_t *ui_MainMenu_Textarea_stationList = NULL;lv_obj_t *ui_MainMenu_Label_Label10 = NULL;lv_obj_t *ui_MainMenu_Button_LoadStation = NULL;lv_obj_t *ui_MainMenu_Label_Label20 = NULL;lv_obj_t *ui_MainMenu_Tabpage_music = NULL;lv_obj_t *ui_MainMenu_Button_scanMusic = NULL;lv_obj_t *ui_MainMenu_Label_Label14 = NULL;lv_obj_t *ui_MainMenu_Label_Label15 = NULL;lv_obj_t *ui_MainMenu_Label_trackCount = NULL;lv_obj_t *ui_MainMenu_Tabpage_region = NULL;lv_obj_t *ui_MainMenu_Image_Globe = NULL;lv_obj_t *ui_MainMenu_Checkbox_AutoIP = NULL;lv_obj_t *ui_MainMenu_Textarea_Latitude = NULL;lv_obj_t *ui_MainMenu_Textarea_Longitude = NULL;lv_obj_t *ui_MainMenu_Image_timezone = NULL;lv_obj_t *ui_MainMenu_Roller_Hour = NULL;lv_obj_t *ui_MainMenu_Roller_Minute = NULL;lv_obj_t *ui_MainMenu_Roller_Unit = NULL;lv_obj_t *ui_MainMenu_Label_Label25 = NULL;lv_obj_t *ui_MainMenu_Tabpage_guide = NULL;lv_obj_t *ui_MainMenu_Textarea_UserGuide = NULL;lv_obj_t *ui_MainMenu_Image_buttons = NULL;lv_obj_t *ui_MainMenu_Button_closeConfig = NULL;lv_obj_t *ui_MainMenu_Label_Label9 = NULL;lv_obj_t *ui_MainMenu_Keyboard_Keyboard1 = NULL;lv_obj_t *ui_MainMenu_Keyboard_Number = NULL;lv_obj_t *ui_MainMenu_Panel_blindPanel = NULL;
+lv_obj_t *ui_Screen_MainMenu = NULL;lv_obj_t *ui_MainMenu_Panel_Menu = NULL;lv_obj_t *ui_MainMenu_Image_LiveStreaming = NULL;lv_obj_t *ui_MainMenu_Image_MusicPlayer = NULL;lv_obj_t *ui_MainMenu_Image_ChatBot = NULL;lv_obj_t *ui_MainMenu_Image_Information = NULL;lv_obj_t *ui_MainMenu_Image_Utility = NULL;lv_obj_t *ui_MainMenu_Image_Config = NULL;lv_obj_t *ui_MainMenu_Tabview_ConfigPanel = NULL;lv_obj_t *ui_MainMenu_Tabpage_network = NULL;lv_obj_t *ui_MainMenu_Label_connectStatus = NULL;lv_obj_t *ui_MainMenu_Label_Label3 = NULL;lv_obj_t *ui_MainMenu_Dropdown_NetworkList = NULL;lv_obj_t *ui_MainMenu_Textarea_Password = NULL;lv_obj_t *ui_MainMenu_Button_NetworkSave = NULL;lv_obj_t *ui_MainMenu_Label_Label12 = NULL;lv_obj_t *ui_MainMenu_Button_NetworkScan = NULL;lv_obj_t *ui_MainMenu_Label_Label13 = NULL;lv_obj_t *ui_MainMenu_Switch_Wifi = NULL;lv_obj_t *ui_MainMenu_Tabpage_screen = NULL;lv_obj_t *ui_MainMenu_Dropdown_Brightness = NULL;lv_obj_t *ui_MainMenu_Dropdown_SleepTimer = NULL;lv_obj_t *ui_MainMenu_Dropdown_Wallpaper = NULL;lv_obj_t *ui_MainMenu_Label_Label8 = NULL;lv_obj_t *ui_MainMenu_Tabpage_station = NULL;lv_obj_t *ui_MainMenu_Textarea_stationList = NULL;lv_obj_t *ui_MainMenu_Label_Label10 = NULL;lv_obj_t *ui_MainMenu_Button_LoadStation = NULL;lv_obj_t *ui_MainMenu_Label_Label20 = NULL;lv_obj_t *ui_MainMenu_Tabpage_music = NULL;lv_obj_t *ui_MainMenu_Button_scanMusic = NULL;lv_obj_t *ui_MainMenu_Label_Label14 = NULL;lv_obj_t *ui_MainMenu_Label_Label15 = NULL;lv_obj_t *ui_MainMenu_Label_trackCount = NULL;lv_obj_t *ui_MainMenu_Tabpage_region = NULL;lv_obj_t *ui_MainMenu_Image_Globe = NULL;lv_obj_t *ui_MainMenu_Checkbox_AutoIP = NULL;lv_obj_t *ui_MainMenu_Textarea_Latitude = NULL;lv_obj_t *ui_MainMenu_Textarea_Longitude = NULL;lv_obj_t *ui_MainMenu_Image_timezone = NULL;lv_obj_t *ui_MainMenu_Roller_Hour = NULL;lv_obj_t *ui_MainMenu_Roller_Minute = NULL;lv_obj_t *ui_MainMenu_Roller_Unit = NULL;lv_obj_t *ui_MainMenu_Label_Label25 = NULL;lv_obj_t *ui_MainMenu_Tabpage_guide = NULL;lv_obj_t *ui_MainMenu_Textarea_UserGuide = NULL;lv_obj_t *ui_MainMenu_Image_buttons = NULL;lv_obj_t *ui_MainMenu_Button_closeConfig = NULL;lv_obj_t *ui_MainMenu_Label_Label9 = NULL;lv_obj_t *ui_MainMenu_Keyboard_Keyboard1 = NULL;lv_obj_t *ui_MainMenu_Keyboard_Number = NULL;lv_obj_t *ui_MainMenu_Panel_blindPanel = NULL;
 // event funtions
 void ui_event_MainMenu_Panel_Menu( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -130,6 +130,14 @@ void ui_event_MainMenu_Button_NetworkScan( lv_event_t * e) {
 
 if ( event_code == LV_EVENT_CLICKED) {
       scanNetwork( e );
+}
+}
+
+void ui_event_MainMenu_Switch_Wifi( lv_event_t * e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+if ( event_code == LV_EVENT_CLICKED) {
+      toggleWiFi( e );
 }
 }
 
@@ -426,13 +434,14 @@ lv_obj_set_style_text_color(lv_tabview_get_tab_btns(ui_MainMenu_Tabview_ConfigPa
 lv_obj_set_style_text_opa(lv_tabview_get_tab_btns(ui_MainMenu_Tabview_ConfigPanel), 255,  LV_PART_ITEMS| LV_STATE_CHECKED);
 
 ui_MainMenu_Tabpage_network = lv_tabview_add_tab(ui_MainMenu_Tabview_ConfigPanel, "Wi-Fi");
+lv_obj_set_scrollbar_mode(ui_MainMenu_Tabpage_network, LV_SCROLLBAR_MODE_OFF);
 lv_obj_set_scroll_dir(ui_MainMenu_Tabpage_network, LV_DIR_HOR);
 
 ui_MainMenu_Label_connectStatus = lv_label_create(ui_MainMenu_Tabpage_network);
 lv_obj_set_width( ui_MainMenu_Label_connectStatus, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_MainMenu_Label_connectStatus, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_MainMenu_Label_connectStatus, 60 );
-lv_obj_set_y( ui_MainMenu_Label_connectStatus, 14 );
+lv_obj_set_y( ui_MainMenu_Label_connectStatus, 12 );
 lv_obj_set_align( ui_MainMenu_Label_connectStatus, LV_ALIGN_BOTTOM_LEFT );
 lv_label_set_text(ui_MainMenu_Label_connectStatus,"Disconnected");
 lv_obj_set_style_text_color(ui_MainMenu_Label_connectStatus, lv_color_hex(0xFF0000), LV_PART_MAIN | LV_STATE_DEFAULT );
@@ -442,8 +451,8 @@ ui_MainMenu_Label_Label3 = lv_label_create(ui_MainMenu_Tabpage_network);
 lv_obj_set_width( ui_MainMenu_Label_Label3, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_MainMenu_Label_Label3, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_MainMenu_Label_Label3, -11 );
-lv_obj_set_y( ui_MainMenu_Label_Label3, 0 );
-lv_label_set_text(ui_MainMenu_Label_Label3,"SSID:\n-------\nPass:                                                                                        10 Wi-Fi slot\n-------                                                                                         \nStatus:");
+lv_obj_set_y( ui_MainMenu_Label_Label3, -2 );
+lv_label_set_text(ui_MainMenu_Label_Label3,"SSID:                                                                                        Max 10\n-------																							                                          Slot\nPass:                                                                                        \n-------                                                                                       Wi-Fi\nStatus:");
 lv_obj_clear_flag( ui_MainMenu_Label_Label3, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM | LV_OBJ_FLAG_SCROLL_CHAIN );    /// Flags
 lv_obj_set_style_text_letter_space(ui_MainMenu_Label_Label3, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_line_space(ui_MainMenu_Label_Label3, 2, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -512,7 +521,21 @@ lv_obj_set_align( ui_MainMenu_Label_Label13, LV_ALIGN_CENTER );
 lv_label_set_text(ui_MainMenu_Label_Label13,"W Scan");
 lv_obj_set_style_text_font(ui_MainMenu_Label_Label13, &lv_font_montserrat_32, LV_PART_MAIN| LV_STATE_DEFAULT);
 
+ui_MainMenu_Switch_Wifi = lv_switch_create(ui_MainMenu_Tabpage_network);
+lv_obj_set_width( ui_MainMenu_Switch_Wifi, 60);
+lv_obj_set_height( ui_MainMenu_Switch_Wifi, 29);
+lv_obj_set_x( ui_MainMenu_Switch_Wifi, 0 );
+lv_obj_set_y( ui_MainMenu_Switch_Wifi, -9 );
+lv_obj_set_align( ui_MainMenu_Switch_Wifi, LV_ALIGN_BOTTOM_RIGHT );
+
+lv_obj_set_style_bg_color(ui_MainMenu_Switch_Wifi, lv_color_hex(0x088CFD), LV_PART_INDICATOR | LV_STATE_CHECKED );
+lv_obj_set_style_bg_opa(ui_MainMenu_Switch_Wifi, 255, LV_PART_INDICATOR| LV_STATE_CHECKED);
+
+lv_obj_set_style_bg_color(ui_MainMenu_Switch_Wifi, lv_color_hex(0x0845FA), LV_PART_KNOB | LV_STATE_DEFAULT );
+lv_obj_set_style_bg_opa(ui_MainMenu_Switch_Wifi, 255, LV_PART_KNOB| LV_STATE_DEFAULT);
+
 ui_MainMenu_Tabpage_screen = lv_tabview_add_tab(ui_MainMenu_Tabview_ConfigPanel, "Screen");
+lv_obj_set_scrollbar_mode(ui_MainMenu_Tabpage_screen, LV_SCROLLBAR_MODE_OFF);
 lv_obj_set_scroll_dir(ui_MainMenu_Tabpage_screen, LV_DIR_HOR);
 
 ui_MainMenu_Dropdown_Brightness = lv_dropdown_create(ui_MainMenu_Tabpage_screen);
@@ -547,6 +570,7 @@ lv_obj_set_y( ui_MainMenu_Label_Label8, -15 );
 lv_label_set_text(ui_MainMenu_Label_Label8,"Brightness        Screen off timer (sec)     Wallpaper");
 
 ui_MainMenu_Tabpage_station = lv_tabview_add_tab(ui_MainMenu_Tabview_ConfigPanel, "Radio");
+lv_obj_set_scrollbar_mode(ui_MainMenu_Tabpage_station, LV_SCROLLBAR_MODE_OFF);
 lv_obj_set_scroll_dir(ui_MainMenu_Tabpage_station, LV_DIR_HOR);
 
 ui_MainMenu_Textarea_stationList = lv_textarea_create(ui_MainMenu_Tabpage_station);
@@ -596,6 +620,7 @@ lv_label_set_text(ui_MainMenu_Label_Label20,"D Load");
 lv_obj_set_style_text_font(ui_MainMenu_Label_Label20, &lv_font_montserrat_32, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_MainMenu_Tabpage_music = lv_tabview_add_tab(ui_MainMenu_Tabview_ConfigPanel, "Music");
+lv_obj_set_scrollbar_mode(ui_MainMenu_Tabpage_music, LV_SCROLLBAR_MODE_OFF);
 lv_obj_set_scroll_dir(ui_MainMenu_Tabpage_music, LV_DIR_HOR);
 
 ui_MainMenu_Button_scanMusic = lv_btn_create(ui_MainMenu_Tabpage_music);
@@ -637,6 +662,7 @@ lv_label_set_text(ui_MainMenu_Label_trackCount,"Card Mount Failed");
 lv_obj_set_style_text_font(ui_MainMenu_Label_trackCount, &lv_font_montserrat_24, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_MainMenu_Tabpage_region = lv_tabview_add_tab(ui_MainMenu_Tabview_ConfigPanel, "Region");
+lv_obj_set_scrollbar_mode(ui_MainMenu_Tabpage_region, LV_SCROLLBAR_MODE_OFF);
 lv_obj_set_scroll_dir(ui_MainMenu_Tabpage_region, LV_DIR_HOR);
 
 ui_MainMenu_Image_Globe = lv_img_create(ui_MainMenu_Tabpage_region);
@@ -750,6 +776,7 @@ lv_label_set_text(ui_MainMenu_Label_Label25,"UTC Offset :Hour   Minute   Unit");
 lv_obj_set_style_text_align(ui_MainMenu_Label_Label25, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_MainMenu_Tabpage_guide = lv_tabview_add_tab(ui_MainMenu_Tabview_ConfigPanel, "User Guide");
+lv_obj_set_scrollbar_mode(ui_MainMenu_Tabpage_guide, LV_SCROLLBAR_MODE_OFF);
 lv_obj_set_scroll_dir(ui_MainMenu_Tabpage_guide, LV_DIR_VER);
 
 ui_MainMenu_Textarea_UserGuide = lv_textarea_create(ui_MainMenu_Tabpage_guide);
@@ -842,6 +869,7 @@ lv_obj_add_event_cb(ui_MainMenu_Panel_Menu, ui_event_MainMenu_Panel_Menu, LV_EVE
 lv_obj_add_event_cb(ui_MainMenu_Textarea_Password, ui_event_MainMenu_Textarea_Password, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Button_NetworkSave, ui_event_MainMenu_Button_NetworkSave, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Button_NetworkScan, ui_event_MainMenu_Button_NetworkScan, LV_EVENT_ALL, NULL);
+lv_obj_add_event_cb(ui_MainMenu_Switch_Wifi, ui_event_MainMenu_Switch_Wifi, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Tabpage_network, ui_event_MainMenu_Tabpage_network, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Dropdown_Brightness, ui_event_MainMenu_Dropdown_Brightness, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_MainMenu_Dropdown_SleepTimer, ui_event_MainMenu_Dropdown_SleepTimer, LV_EVENT_ALL, NULL);
@@ -893,6 +921,7 @@ ui_MainMenu_Button_NetworkSave= NULL;
 ui_MainMenu_Label_Label12= NULL;
 ui_MainMenu_Button_NetworkScan= NULL;
 ui_MainMenu_Label_Label13= NULL;
+ui_MainMenu_Switch_Wifi= NULL;
 ui_MainMenu_Tabpage_screen= NULL;
 ui_MainMenu_Dropdown_Brightness= NULL;
 ui_MainMenu_Dropdown_SleepTimer= NULL;

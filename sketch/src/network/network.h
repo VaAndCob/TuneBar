@@ -10,9 +10,10 @@ struct WifiEntry {
 
 extern WifiEntry wifiList[];
 extern TaskHandle_t wifiTaskHandle;
+extern bool wifiEnable;
 
 int loadWifiList(WifiEntry list[]);
-void saveWifiList(WifiEntry list[], int count);
+void saveWifiList(const WifiEntry list[], int count);
 int addOrUpdateWifi(const char *ssid, const char *password, WifiEntry list[], int count);
 void scanWiFi(bool updateList);
 void wifiConnect();

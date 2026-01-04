@@ -132,10 +132,21 @@ void init_main_menu_task(lv_timer_t *timer) {
   temp_unit = pref.getUChar("temp_unit", 0); // degree C
   lv_roller_set_selected(ui_MainMenu_Roller_Unit, temp_unit, LV_ANIM_OFF); // set index
 
+  //wifi enable
+  wifiEnable = pref.getBool("wifi_enable", true);
+  if (wifiEnable) {
+    lv_obj_add_state(ui_MainMenu_Switch_Wifi, LV_STATE_CHECKED);
+  } else {//init wifi stack once to prevent Audio library crashed
+      WiFi.mode(WIFI_STA);
+      WiFi.disconnect(true);
+      log_d("WiFi stack initialized");
+  }
+  
+
   pref.end();
 
   SCREEN_OFF_TIMER = millis(); // reset timer
-  wifiConnect();
+   if (wifiEnable) wifiConnect();
 }
 
 // ################# App start here after screen initialized ##############################
@@ -703,9 +714,14 @@ void saveConfig(lv_event_t *e) {
   pref.putUChar("offset_minute", offset_minute_index);
   pref.putUChar("temp_unit", temp_unit);
   // pref.putUChar("playing_mode", playMode);// no need, it save everytime toggle plyaing mode
+  //wifienable
+  pref.putBool("wifi_enable", wifiEnable);
+
   pref.end();
   SCREEN_OFF_TIMER = millis(); // reset timer
-  rtc.ntp_sync(UTC_offset_hour[offset_hour_index], UTC_offset_minute[offset_minute_index]); // set time again.
+  if (WiFi.status() == WL_CONNECTED) {//sync time if wifi connected
+      rtc.ntp_sync(UTC_offset_hour[offset_hour_index], UTC_offset_minute[offset_minute_index]);
+   }
 }
 
 // user save wifi credential
@@ -725,6 +741,25 @@ void saveWiFiCredential(lv_event_t *e) {
 void scanNetwork(lv_event_t *e) {
   SCREEN_OFF_TIMER = millis(); // reset timer
   scanWiFi(true); // scan and update wifi list in dropdown
+}
+//toggle wifi on/off
+void toggleWiFi(lv_event_t * e) {
+  SCREEN_OFF_TIMER = millis(); // reset timer
+  if (wifiEnable) {
+    wifiEnable = false;
+    WiFi.disconnectAsync();
+    lv_label_set_text(ui_MainMenu_Label_connectStatus, "Disconnected");
+    lv_obj_set_style_text_color(ui_MainMenu_Label_connectStatus, lv_color_hex(0xFF0000), LV_PART_MAIN);
+    lv_obj_set_style_text_color(ui_Player_Label_WiFi, lv_color_hex(0x777777), LV_PART_MAIN);
+    log_d("Delete Wifi Task");
+    if(wifiTaskHandle != NULL) {
+      vTaskDelete(wifiTaskHandle);
+      wifiTaskHandle = NULL;
+    }
+  } else {
+    wifiEnable = true;
+    wifiConnect();
+  }
 }
 
 //---------------------------------------

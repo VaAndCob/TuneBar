@@ -15,6 +15,7 @@
 #include "ui/ui.h"
 #include "weather/weather.h"
 #include <LittleFS.h>
+#include "network/network.h"
 
 #include "ESP32-audioI2S-master/Audio.h"
 Audio audio;
@@ -220,7 +221,7 @@ void process_ui_status_queue() {
 
       } // switch
       // update weather condition widget every 15 min.
-      if (msg.minute % 15 == 0 && msg.second == 0) updateWeatherPanel();
+      if (msg.minute % 15 == 0 && msg.second == 0 && wifiEnable) updateWeatherPanel();
       break;
 
     // audio play position
@@ -293,7 +294,6 @@ void process_audio_cmd_que() {
     case CMD_AUDIO_CONNECT_FS: {
       bool ok = false;
       UIStatusPayload payload = {
-          // prepare mesasge
           .type = STATUS_UPDATE_TRACK_DESC_SET,
       };
       switch (msg.source) {

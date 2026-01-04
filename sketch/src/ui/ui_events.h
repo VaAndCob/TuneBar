@@ -19,6 +19,7 @@ void informationMode(lv_event_t * e);
 void utilityMode(lv_event_t * e);
 void saveWiFiCredential(lv_event_t * e);
 void scanNetwork(lv_event_t * e);
+void toggleWiFi(lv_event_t * e);
 void setBrightness(lv_event_t * e);
 void setTimer(lv_event_t * e);
 void setWallpaper(lv_event_t * e);

@@ -134,19 +134,19 @@ void init_main_menu_task(lv_timer_t *timer) {
 
   //wifi enable
   wifiEnable = pref.getBool("wifi_enable", true);
-  if (wifiEnable) {
-    lv_obj_add_state(ui_MainMenu_Switch_Wifi, LV_STATE_CHECKED);
-  } else {//init wifi stack once to prevent Audio library crashed
-      WiFi.mode(WIFI_STA);
-      WiFi.disconnect(true);
-      log_d("WiFi stack initialized");
-  }
-  
 
   pref.end();
-
   SCREEN_OFF_TIMER = millis(); // reset timer
-   if (wifiEnable) wifiConnect();
+
+  if (wifiEnable) {
+    lv_obj_add_state(ui_MainMenu_Switch_Wifi, LV_STATE_CHECKED);
+    wifiConnect();
+  } else {//init wifi stack once to prevent Audio library crashed
+    WiFi.mode(WIFI_STA);
+    WiFi.disconnect(true);
+    log_d("WiFi stack initialized");
+  }
+  
 }
 
 // ################# App start here after screen initialized ##############################

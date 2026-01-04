@@ -403,7 +403,7 @@ void wifi_connect_task(void *param) {
 // global wifi connect
 void wifiConnect() {
   enableTlsInPsram();
-  if (wifiTaskHandle == NULL) xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 1, &wifiTaskHandle, 0);
+  if (wifiTaskHandle == NULL) xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 6 * 1024, NULL, 1, &wifiTaskHandle, 1);
 }
 
 // sanitze JSON data by removing BOM and extraneous characters

@@ -136,9 +136,9 @@ void WAVESHARE_349_lvgl_port_task(void *arg) {
 
   for (;;) {
     process_ui_status_queue();
-
+    esp_task_wdt_reset();
     if (WAVESHARE_349_lvgl_lock(10)) {
-      esp_task_wdt_reset();
+      
       uint32_t next = lv_timer_handler();
       esp_task_wdt_reset();
       WAVESHARE_349_lvgl_unlock();

@@ -303,136 +303,205 @@ void ota_task(void *param) {
 }
 
 /* ========== POPUP UI ========== */
-void ota_show_popup() {
-  ota_abort = true;
+void ota_show_popup()
+{
+    lv_async_call(
+        [](void *param) {
 
-  // make modal box to block input
-  modal_blocker = lv_obj_create(lv_layer_top());
-  lv_obj_remove_style_all(modal_blocker);
-  lv_obj_set_size(modal_blocker, LV_HOR_RES, LV_VER_RES);
-  lv_obj_center(modal_blocker);
-  /* visually dim screen (optional) */
-  lv_obj_set_style_bg_opa(modal_blocker, LV_OPA_80, 0);
-  lv_obj_set_style_bg_color(modal_blocker, lv_color_black(), 0);
-  /* IMPORTANT — capture all input */
-  lv_obj_add_flag(modal_blocker, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_add_flag(modal_blocker, LV_OBJ_FLAG_GESTURE_BUBBLE);
+            ota_abort = true;
 
-  // make popup
-  ota_popup = lv_obj_create(lv_layer_top());
-  lv_obj_set_size(ota_popup, 350, LV_VER_RES);
-  lv_obj_center(ota_popup);
-  lv_obj_set_style_radius(ota_popup, 15, 0);
-  lv_obj_set_style_pad_all(ota_popup, 5, 0);
-  lv_obj_t *title = lv_label_create(ota_popup);
-  lv_label_set_text(title, "Firmware Update");
-  lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
-  lv_obj_set_style_text_font(title, &lv_font_montserrat_18, 0);
+            /* ---------- MODAL BLOCKER ---------- */
+            modal_blocker = lv_obj_create(lv_layer_top());
+            lv_obj_remove_style_all(modal_blocker);
+            lv_obj_set_size(modal_blocker, LV_HOR_RES, LV_VER_RES);
+            lv_obj_center(modal_blocker);
+            lv_obj_set_style_bg_opa(modal_blocker, LV_OPA_80, 0);
+            lv_obj_set_style_bg_color(modal_blocker, lv_color_black(), 0);
+            lv_obj_add_flag(modal_blocker, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_add_flag(modal_blocker, LV_OBJ_FLAG_GESTURE_BUBBLE);
 
-  //----------- message --------------
-  ota_msg = lv_label_create(ota_popup);
-  lv_label_set_text(ota_msg, "Click Update to start");
-  lv_obj_align(ota_msg, LV_ALIGN_TOP_MID, 0, 40);
-  lv_obj_set_style_text_font(ota_msg, &lv_font_montserrat_18, 0);
-  // ---------- CLOSE (X) BUTTON ----------
-  btn_close = lv_btn_create(ota_popup);
-  lv_obj_set_size(btn_close, 36, 36);
-  lv_obj_align(btn_close, LV_ALIGN_TOP_RIGHT, 0, 0);
-  lv_obj_t *lbl_x = lv_label_create(btn_close);
-  lv_label_set_text(lbl_x, LV_SYMBOL_CLOSE);
-  lv_obj_set_style_text_font(lbl_x, &lv_font_montserrat_28, 0);
-  lv_obj_center(lbl_x);
-  lv_obj_add_event_cb( // close handler
-      btn_close,
-      [](lv_event_t *e) {
-        if (ota_popup) {
-          lv_obj_del(ota_popup);
-          ota_popup = NULL;
-          lv_obj_del(modal_blocker);
-          modal_blocker = NULL;
-        }
-      },
-      LV_EVENT_CLICKED, NULL);
+            /* ---------- POPUP ---------- */
+            ota_popup = lv_obj_create(lv_layer_top());
+            lv_obj_set_size(ota_popup, 350, LV_VER_RES);
+            lv_obj_center(ota_popup);
+            lv_obj_set_style_radius(ota_popup, 15, 0);
+            lv_obj_set_style_pad_all(ota_popup, 5, 0);
 
-  // Progress bar
-  ota_bar = lv_bar_create(ota_popup);
-  lv_obj_set_size(ota_bar, 280, 12);
-  lv_obj_align(ota_bar, LV_ALIGN_CENTER, 0, 5);
-  lv_bar_set_range(ota_bar, 0, 100);
-  // Update button
-  lv_obj_t *btn_update = lv_btn_create(ota_popup);
-  lv_obj_set_size(btn_update, 180, 44);
-  lv_obj_align(btn_update, LV_ALIGN_BOTTOM_MID, 0, 0);
-  lv_obj_t *lbl_update = lv_label_create(btn_update);
-  lv_label_set_text(lbl_update, LV_SYMBOL_DOWNLOAD " Update");
-  lv_obj_set_style_text_font(lbl_update, &lv_font_montserrat_18, 0);
-  lv_obj_center(lbl_update);
+            /* ---------- TITLE ---------- */
+            lv_obj_t *title = lv_label_create(ota_popup);
+            lv_label_set_text(title, "Firmware Update");
+            lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
+            lv_obj_set_style_text_font(title, &lv_font_montserrat_18, 0);
 
-  lv_obj_add_event_cb(
-      btn_update,
-      [](lv_event_t *e) {
-        lv_obj_t *lbl_update = (lv_obj_t *)lv_event_get_user_data(e);
-        if (!lbl_update) return;
-        if (otaTaskHandle == NULL) {
-          lv_obj_add_flag(btn_close, LV_OBJ_FLAG_HIDDEN);
-          lv_label_set_text(lbl_update, LV_SYMBOL_CLOSE " Abort & Reboot");
-          // begin OTA Task
-          xTaskCreatePinnedToCore(ota_task, "ota_task", 6 * 1024, NULL, 4, &otaTaskHandle, 1);
-        } else {
-          lv_label_set_text(ota_msg, "Update aborted. Rebooting...");
-          lv_timer_create([](lv_timer_t *) { esp_restart(); }, 500, NULL);
-        }
-      },
-      LV_EVENT_CLICKED, lbl_update);
+            /* ---------- MESSAGE ---------- */
+            ota_msg = lv_label_create(ota_popup);
+            lv_label_set_text(ota_msg, "Click Update to start");
+            lv_obj_align(ota_msg, LV_ALIGN_TOP_MID, 0, 40);
+            lv_obj_set_style_text_font(ota_msg, &lv_font_montserrat_18, 0);
 
-  // swap blind panel on the top
-  lv_obj_set_parent(ui_Utility_Panel_blindPanel, lv_layer_top());
-  lv_obj_move_foreground(ui_Utility_Panel_blindPanel);
+            /* ---------- CLOSE BUTTON ---------- */
+            btn_close = lv_btn_create(ota_popup);
+            lv_obj_set_size(btn_close, 36, 36);
+            lv_obj_align(btn_close, LV_ALIGN_TOP_RIGHT, 0, 0);
+
+            lv_obj_t *lbl_x = lv_label_create(btn_close);
+            lv_label_set_text(lbl_x, LV_SYMBOL_CLOSE);
+            lv_obj_set_style_text_font(lbl_x, &lv_font_montserrat_28, 0);
+            lv_obj_center(lbl_x);
+
+            lv_obj_add_event_cb(
+                btn_close,
+                [](lv_event_t *e) {
+                    if (ota_popup) {
+                        lv_obj_del(ota_popup);
+                        ota_popup = NULL;
+                    }
+                    if (modal_blocker) {
+                        lv_obj_del(modal_blocker);
+                        modal_blocker = NULL;
+                    }
+                },
+                LV_EVENT_CLICKED,
+                NULL
+            );
+
+            /* ---------- PROGRESS BAR ---------- */
+            ota_bar = lv_bar_create(ota_popup);
+            lv_obj_set_size(ota_bar, 280, 12);
+            lv_obj_align(ota_bar, LV_ALIGN_CENTER, 0, 5);
+            lv_bar_set_range(ota_bar, 0, 100);
+
+            /* ---------- UPDATE BUTTON ---------- */
+            lv_obj_t *btn_update = lv_btn_create(ota_popup);
+            lv_obj_set_size(btn_update, 180, 44);
+            lv_obj_align(btn_update, LV_ALIGN_BOTTOM_MID, 0, 0);
+
+            lv_obj_t *lbl_update = lv_label_create(btn_update);
+            lv_label_set_text(lbl_update, LV_SYMBOL_DOWNLOAD " Update");
+            lv_obj_set_style_text_font(lbl_update, &lv_font_montserrat_18, 0);
+            lv_obj_center(lbl_update);
+
+            lv_obj_add_event_cb(
+                btn_update,
+                [](lv_event_t *e) {
+                    lv_obj_t *label = (lv_obj_t *)lv_event_get_user_data(e);
+                    if (!label) return;
+
+                    if (otaTaskHandle == NULL) {
+                        lv_obj_add_flag(btn_close, LV_OBJ_FLAG_HIDDEN);
+                        lv_label_set_text(label, LV_SYMBOL_CLOSE " Abort & Reboot");
+
+                        xTaskCreatePinnedToCore(
+                            ota_task,
+                            "ota_task",
+                            6 * 1024,
+                            NULL,
+                            4,
+                            &otaTaskHandle,
+                            1
+                        );
+                    } else {
+                        lv_label_set_text(ota_msg, "Update aborted. Rebooting...");
+                        lv_timer_create(
+                            [](lv_timer_t *) { esp_restart(); },
+                            500,
+                            NULL
+                        );
+                    }
+                },
+                LV_EVENT_CLICKED,
+                lbl_update
+            );
+
+            /* ---------- BRING BLIND PANEL TO FRONT ---------- */
+            lv_obj_set_parent(ui_Utility_Panel_blindPanel, lv_layer_top());
+            lv_obj_move_foreground(ui_Utility_Panel_blindPanel);
+
+        },
+        NULL
+    );
 }
+
 
 // Notify update message box ppopup
-void notifyUpdate(const char *latestVer) {
-  static uint32_t prev_screen_delay; // static storage (safe lifetime)
-  prev_screen_delay = SCREEN_OFF_DELAY; // assign current delay time
-  SCREEN_OFF_DELAY = 0;
+struct NotifyUpdateCtx {
+    char *title;
+    uint32_t prev_screen_delay;
+};
 
-  char title[48];
-  snprintf(title, sizeof(title), LV_SYMBOL_REFRESH " New Update Available %s", latestVer);
-  char *title_copy = strdup(title);
+static void notifyUpdate_ui(void *p) {
+    NotifyUpdateCtx *ctx = (NotifyUpdateCtx *)p;
+    if (!ctx) return;
 
-  lv_obj_t *msgBox = lv_msgbox_create(NULL, title_copy, "To update firmware, please click\nUtilities -> System Information", NULL, true);
+    SCREEN_OFF_DELAY = 0;
 
-  lv_obj_set_width(msgBox, 420);
-  lv_obj_center(msgBox);
-  lv_obj_t *titleObj = lv_msgbox_get_title(msgBox);
-  lv_obj_t *textObj = lv_msgbox_get_text(msgBox);
-  lv_obj_t *closeBtn = lv_msgbox_get_close_btn(msgBox);
-  lv_obj_set_style_text_font(titleObj, &lv_font_montserrat_18, 0);
-  lv_obj_set_style_text_font(textObj, &lv_font_montserrat_18, 0);
-  lv_obj_set_style_text_font(closeBtn, &lv_font_montserrat_28, 0);
-  lv_obj_set_size(closeBtn, 48, 48);
-  lv_obj_clear_flag(ui_Utility_Button_UpdateFirmware, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_t *msgBox = lv_msgbox_create(
+        NULL,
+        ctx->title,
+        "To update firmware, please click\nUtilities -> System Information",
+        NULL,
+        true
+    );
 
-  lv_obj_add_event_cb(
-      closeBtn,
-      [](lv_event_t *e) {
-        uint32_t *prev = (uint32_t *)lv_event_get_user_data(e);
-        if (!prev) return;
-        SCREEN_OFF_DELAY = *prev; // restore delay time
-        BL_OFF = false;
-        SCREEN_OFF_TIMER = millis();//reset screenoff timer
-      },
-      LV_EVENT_RELEASED, // ✅ IMPORTANT: use LV_EVENT_RELEASED
-      &prev_screen_delay);
-  // Free title_copy when msgbox is deleted
-  lv_obj_add_event_cb(
-      msgBox,
-      [](lv_event_t *e) {
-        char *title = (char *)lv_event_get_user_data(e);
-        if (title) free(title);
-      },
-      LV_EVENT_DELETE, title_copy);
+    lv_obj_set_width(msgBox, 420);
+    lv_obj_center(msgBox);
+
+    lv_obj_t *titleObj = lv_msgbox_get_title(msgBox);
+    lv_obj_t *textObj  = lv_msgbox_get_text(msgBox);
+    lv_obj_t *closeBtn = lv_msgbox_get_close_btn(msgBox);
+
+    lv_obj_set_style_text_font(titleObj, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(textObj,  &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(closeBtn, &lv_font_montserrat_28, 0);
+    lv_obj_set_size(closeBtn, 48, 48);
+
+    lv_obj_clear_flag(ui_Utility_Button_UpdateFirmware, LV_OBJ_FLAG_HIDDEN);
+
+    // Close button handler
+    lv_obj_add_event_cb(
+        closeBtn,
+        [](lv_event_t *e) {
+            NotifyUpdateCtx *ctx = (NotifyUpdateCtx *)lv_event_get_user_data(e);
+            if (!ctx) return;
+
+            SCREEN_OFF_DELAY = ctx->prev_screen_delay;
+            SCREEN_OFF_TIMER = millis();
+            BL_OFF = false;
+        },
+        LV_EVENT_RELEASED,
+        ctx
+    );
+
+    // Cleanup on delete
+    lv_obj_add_event_cb(
+        msgBox,
+        [](lv_event_t *e) {
+            NotifyUpdateCtx *ctx = (NotifyUpdateCtx *)lv_event_get_user_data(e);
+            if (ctx) {
+                free(ctx->title);
+                free(ctx);
+            }
+        },
+        LV_EVENT_DELETE,
+        ctx
+    );
 }
+
+void notifyUpdate(const char *latestVer) {
+    if (!latestVer) return;
+    NotifyUpdateCtx *ctx = (NotifyUpdateCtx *)malloc(sizeof(NotifyUpdateCtx));
+    if (!ctx) return;
+    ctx->prev_screen_delay = SCREEN_OFF_DELAY;
+    char title[48];
+    snprintf(title, sizeof(title), LV_SYMBOL_REFRESH " New Update Available %s", latestVer);
+    ctx->title = strdup(title);
+    if (!ctx->title) {
+        free(ctx);
+        return;
+    }
+    lv_async_call(notifyUpdate_ui, ctx);
+}
+
 
 //-----  Functions to show memory and system info
 void memoryInfo(char *buf, size_t len) {

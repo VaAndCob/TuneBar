@@ -299,8 +299,8 @@ lv_obj_clear_flag( ui_Info_Image_dog, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 
 ui_Info_Container_WeatherDetail = lv_obj_create(ui_Info_Panel_Weather);
 lv_obj_remove_style_all(ui_Info_Container_WeatherDetail);
-lv_obj_set_width( ui_Info_Container_WeatherDetail, 160);
 lv_obj_set_height( ui_Info_Container_WeatherDetail, 130);
+lv_obj_set_width( ui_Info_Container_WeatherDetail, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_x( ui_Info_Container_WeatherDetail, -18 );
 lv_obj_set_y( ui_Info_Container_WeatherDetail, 0 );
 lv_obj_set_align( ui_Info_Container_WeatherDetail, LV_ALIGN_LEFT_MID );

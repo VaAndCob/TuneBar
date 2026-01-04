@@ -126,17 +126,11 @@ static void WAVESHARE_349_lvgl_unlock(void) {
 }
 
 // ##########################################################
-
+/*
 void WAVESHARE_349_lvgl_port_task(void *arg) {
 
-  const TickType_t minDelay = pdMS_TO_TICKS(WAVESHARE_349_LVGL_TASK_MIN_DELAY_MS);
-  const TickType_t maxDelay = pdMS_TO_TICKS(WAVESHARE_349_LVGL_TASK_MAX_DELAY_MS);
- 
-  esp_task_wdt_add(NULL); // Register *this* task
-
-  for (;;) {
+   for (;;) {
     process_ui_status_queue();
-    esp_task_wdt_reset();
     if (WAVESHARE_349_lvgl_lock(10)) {
       
       uint32_t next = lv_timer_handler();
@@ -150,6 +144,27 @@ void WAVESHARE_349_lvgl_port_task(void *arg) {
     }
   }
 }
+*/
+void WAVESHARE_349_lvgl_port_task(void *arg)
+{
+   uint32_t task_delay_ms = WAVESHARE_349_LVGL_TASK_MAX_DELAY_MS;
+
+  for(;;) {
+    if (WAVESHARE_349_lvgl_lock(-1)) {
+      process_ui_status_queue();
+      task_delay_ms = lv_timer_handler();
+      WAVESHARE_349_lvgl_unlock();
+    }
+    if (task_delay_ms > WAVESHARE_349_LVGL_TASK_MAX_DELAY_MS) {
+      task_delay_ms = WAVESHARE_349_LVGL_TASK_MAX_DELAY_MS;
+    } else if (task_delay_ms < WAVESHARE_349_LVGL_TASK_MIN_DELAY_MS)
+    {
+      task_delay_ms = WAVESHARE_349_LVGL_TASK_MIN_DELAY_MS;
+    }
+    vTaskDelay(pdMS_TO_TICKS(task_delay_ms));
+  }
+}
+
 
 void lvgl_port_init(void) {
 #if (Rotated == USER_DISP_ROT_90)

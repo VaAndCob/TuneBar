@@ -31,8 +31,7 @@ void updateSDCARDStatus(const char *status,  const uint32_t wifiColor) {
      .type = STATUS_SDCARD_STATUS,
      .wificolor = wifiColor,
      };
-  strncpy(msg.status, status, sizeof(msg.status) - 1);         
-  msg.status[sizeof(msg.status) - 1] = '\0';
+  snprintf(msg.status, sizeof(msg.status), "%s", status);
   xQueueSend(ui_status_queue, &msg,  0);
 }
 // WiFi network  "network.cpp"
@@ -42,8 +41,7 @@ void updateWiFiStatus(const char *status, const uint32_t labelColor, const uint3
       .labelcolor = labelColor,
       .wificolor = wifiColor,
   };
-  strncpy(msg.status, status, sizeof(msg.status) - 1);
-  msg.status[sizeof(msg.status) - 1] = '\0';
+   snprintf(msg.status, sizeof(msg.status), "%s", status);
   xQueueSend(ui_status_queue, &msg, 0);
 }
 
@@ -51,8 +49,7 @@ void updateWiFiOption(const char *status) {
   UIStatusPayload msg = {
       .type = STATUS_WIFI_OPTION,
   };
-  strncpy(msg.status, status, sizeof(msg.status) - 1);
-  msg.status[sizeof(msg.status) - 1] = '\0';
+   snprintf(msg.status, sizeof(msg.status), "%s", status);
   xQueueSend(ui_status_queue, &msg, 0);
 }
 
@@ -119,8 +116,7 @@ void audioPlayFS(uint8_t source, const char *filename) {
       .source = source,
       .stationName = {0},
   };
-  strncpy(msg.url_filename, filename, sizeof(msg.url_filename) - 1);
-  msg.url_filename[sizeof(msg.url_filename) - 1] = '\0';
+  snprintf(msg.url_filename, sizeof(msg.url_filename), "%s", filename);
   xQueueSend(audio_cmd_queue, &msg, 0);
 }
 void audioPlayHOST(const char *filename, const char *stationName) {
@@ -131,10 +127,8 @@ void audioPlayHOST(const char *filename, const char *stationName) {
       .source = 0,
       .stationName = {0},
   };
-  strncpy(msg.url_filename, filename, sizeof(msg.url_filename) - 1);
-  msg.url_filename[sizeof(msg.url_filename) - 1] = '\0';
-  strncpy(msg.stationName, stationName, sizeof(msg.stationName) - 1);
-  msg.stationName[sizeof(msg.stationName) - 1] = '\0';
+  snprintf(msg.url_filename, sizeof(msg.url_filename), "%s", filename);
+  snprintf(msg.stationName, sizeof(msg.stationName), "%s", stationName);
   xQueueSend(audio_cmd_queue, &msg, 0);
 }
 
@@ -267,7 +261,7 @@ void process_ui_status_queue() {
 
     case STATUS_WIFI_OPTION:
       if (msg.status[0] != '\0')//there are wifi in the list
-       lv_dropdown_set_options(ui_MainMenu_Dropdown_NetworkList, msg.status);
+        lv_dropdown_set_options(ui_MainMenu_Dropdown_NetworkList, msg.status);
        else
         lv_dropdown_clear_options(ui_MainMenu_Dropdown_NetworkList);
       break;
@@ -303,28 +297,27 @@ void process_audio_cmd_que() {
       if (!ok) {
         log_w("Failed to open file: %s", msg.url_filename);
         audio.connecttoFS(LittleFS, "/audio/error.mp3");
-        strncpy(payload.trackDesc, "Cannot access music.\nPlease check the SD Card.\nOr Update music library.", sizeof(payload.trackDesc) - 1);
+        snprintf(payload.trackDesc, sizeof(payload.trackDesc),"Cannot access music.\nPlease check the SD Card.\nOr Update music library.");  
       } else {
-        strncpy(payload.trackDesc, "", sizeof(payload.trackDesc) - 1);
+        snprintf(payload.trackDesc, sizeof(payload.trackDesc),"");
       }
-      payload.trackDesc[sizeof(payload.trackDesc) - 1] = '\0';
       xQueueSend(ui_status_queue, &payload, 100); // send message
      break;
     }
     //Play URL
     case CMD_AUDIO_CONNECT_HOST: {
-      bool ok = audio.connecttohost(msg.url_filename);
       UIStatusPayload payload = {
           .type = STATUS_UPDATE_TRACK_DESC_SET,
       };
-      if (!ok) {
+      if (wifiEnable) {
+        if (audio.connecttohost(msg.url_filename))
+            snprintf(payload.trackDesc, sizeof(payload.trackDesc),"%s",msg.stationName);
+      
+      } else {
         log_w("Failed to open url: %s", msg.stationName);
         audio.connecttoFS(LittleFS, "/audio/error.mp3");
-        strncpy(payload.trackDesc, "Network connection unavailable.\nPlease reconnect to continue streaming.", sizeof(payload.trackDesc) - 1);
-      } else {
-        strncpy(payload.trackDesc, msg.stationName, sizeof(payload.trackDesc) - 1);
+        snprintf(payload.trackDesc, sizeof(payload.trackDesc),"Network connection unavailable.\nPlease reconnect to continue streaming.");
       }
-      payload.trackDesc[sizeof(payload.trackDesc) - 1] = '\0';
       xQueueSend(ui_status_queue, &payload, 100); // send message
      break;
     }

@@ -109,8 +109,7 @@ void init_main_menu_task(lv_timer_t *timer) {
   } else { // lat,long
 
     char qp_copy[64];
-    strncpy(qp_copy, query_parameter, sizeof(qp_copy));
-    qp_copy[sizeof(qp_copy) - 1] = '\0'; // safety
+    snprintf(qp_copy, sizeof(qp_copy), "%s", query_parameter);
     char *comma = strchr(qp_copy, ',');
     if (comma != NULL) {
       *comma = '\0';

@@ -132,8 +132,7 @@ static void ota_set_progress_async(uint8_t pct, const char *txt) {
   log_i("%s", txt);
   ota_ui_msg_t *m = (ota_ui_msg_t *)lv_mem_alloc(sizeof(ota_ui_msg_t));
   m->pct = pct;
-  strncpy(m->txt, txt, sizeof(m->txt) - 1);
-  m->txt[sizeof(m->txt) - 1] = '\0';
+  snprintf(m->txt, sizeof(m->txt), "%s", txt);
   lv_async_call(
       [](void *p) {
         ota_ui_msg_t *m = (ota_ui_msg_t *)p;

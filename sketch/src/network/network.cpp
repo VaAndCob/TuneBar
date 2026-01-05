@@ -24,6 +24,9 @@ WifiEntry wifiList[WIFI_MAX];
 byte networks = 0;
 TaskHandle_t wifiTaskHandle = NULL;
 bool wifiEnable = false;
+bool wifi_need_connect = false;
+lv_timer_t *wifi_check_timer = NULL;
+
 
 //-----------------------------------------------------------
 // Enable mbedTLS to use PSRAM for dynamic memory allocation instead of internal RAM
@@ -292,9 +295,8 @@ void scanWiFi(bool updateList) {
 // wifi task -> check connection status and attemp to connect every 30 second
 void wifi_connect_task(void *param) {
 
-  for (;;) {
-    // Wifi disconnected
-    if (WiFi.status() != WL_CONNECTED) {
+  while (wifi_need_connect) {
+   
       if (WiFi.getMode() != WIFI_STA) WiFi.mode(WIFI_STA);
       vTaskDelay(pdMS_TO_TICKS(100));
       uint8_t wifiCount = loadWifiList(wifiList);
@@ -393,12 +395,18 @@ void wifi_connect_task(void *param) {
           } // for each match
         } // If we
       }
-    } // wifi connected
 
+         if (WiFi.status() == WL_CONNECTED) {
+            wifi_need_connect = false;
+            lv_timer_resume(wifi_check_timer);//resume timer
+            break;
+        }
     UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
     log_d("{ Task stack remaining MIN: %u bytes }", hwm);
     vTaskDelay(pdMS_TO_TICKS(30000));
   }
+    wifiTaskHandle = NULL;
+    vTaskDelete(NULL);
 }
 // global wifi connect
 void wifiConnect() {

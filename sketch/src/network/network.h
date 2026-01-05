@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-
+#include "lvgl.h"
 
 struct WifiEntry {
     char ssid[64];
@@ -11,6 +11,10 @@ struct WifiEntry {
 extern WifiEntry wifiList[];
 extern TaskHandle_t wifiTaskHandle;
 extern bool wifiEnable;
+extern bool wifi_need_connect;
+
+extern lv_timer_t *wifi_check_timer;
+
 
 int loadWifiList(WifiEntry list[]);
 void saveWifiList(const WifiEntry list[], int count);

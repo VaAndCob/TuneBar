@@ -25,6 +25,7 @@ static lv_obj_t *lbl_update = NULL;
 
 static volatile bool ota_abort = false;
 
+
 //------------------------------------------------
 
 // function return firmware version to integer number
@@ -159,7 +160,6 @@ static void ota_set_btn_label_async(const char *txt) {
 /* ========== OTA TASK ========== */
 void ota_task(void *param) {
   ota_set_message_async(LV_SYMBOL_REFRESH " Starting update...");
-  vTaskSuspend(wifiTaskHandle); // suspend wifi connection task
   vTaskDelay(pdMS_TO_TICKS(200));
 
   const char *firmwareURL = "https://vaandcob.github.io/webpage/firmware/tunebar/tunebar.bin";
@@ -293,7 +293,6 @@ void ota_task(void *param) {
   otaClient.stop();
 
   vTaskDelay(pdMS_TO_TICKS(300));
-  vTaskResume(wifiTaskHandle); // resume wifi connect task
 
   SCREEN_OFF_DELAY = temp_screen_off_delay; // set screen timer back
   BL_OFF = true;
@@ -389,23 +388,11 @@ void ota_show_popup()
                     if (otaTaskHandle == NULL) {
                         lv_obj_add_flag(btn_close, LV_OBJ_FLAG_HIDDEN);
                         lv_label_set_text(label, LV_SYMBOL_CLOSE " Abort & Reboot");
-
-                        xTaskCreatePinnedToCore(
-                            ota_task,
-                            "ota_task",
-                            6 * 1024,
-                            NULL,
-                            4,
-                            &otaTaskHandle,
-                            1
-                        );
+                         // start OTA Task
+                        xTaskCreatePinnedToCore(ota_task,"ota_task", 6 * 1024,NULL,4, &otaTaskHandle,1 );
                     } else {
                         lv_label_set_text(ota_msg, "Update aborted. Rebooting...");
-                        lv_timer_create(
-                            [](lv_timer_t *) { esp_restart(); },
-                            500,
-                            NULL
-                        );
+                        lv_timer_create([](lv_timer_t *) { esp_restart(); },500, NULL );
                     }
                 },
                 LV_EVENT_CLICKED,
@@ -428,6 +415,7 @@ struct NotifyUpdateCtx {
     uint32_t prev_screen_delay;
 };
 
+// create notify a new firmware version msgbox
 static void notifyUpdate_ui(void *p) {
     NotifyUpdateCtx *ctx = (NotifyUpdateCtx *)p;
     if (!ctx) return;

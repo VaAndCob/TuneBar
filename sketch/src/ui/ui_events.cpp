@@ -34,7 +34,16 @@ const char *wallpaper_menu = "None\nThailand\nChristmas1\nChristmas2\nFuture\nNa
 const lv_img_dsc_t *wallpaper_list[6] = {
     NULL, &ui_img_wallpaper_thailand_png, &ui_img_wallpaper_christmas1_png, &ui_img_wallpaper_christmas2_png, &ui_img_wallpaper_future_png, &ui_img_wallpaper_nature_png,
 };
-
+//wifi monitor call back from timer
+void lvgl_wifi_check_cb(lv_timer_t *t) {
+  if (wifiEnable) {//if enable
+    if (WiFi.status() != WL_CONNECTED && wifiTaskHandle == NULL) {//wifi disconnected
+        wifi_need_connect = true;
+        lv_timer_pause(wifi_check_timer);//pause the timer
+        wifiConnect();  // create task ONCE
+    }
+  }  
+}
 //----------- LOGO SCREEN EVENTS ------------
 void lv_create_delayed_task(lv_timer_cb_t callback, uint32_t delay_ms, void *user_data) {
   lv_timer_t *timer = lv_timer_create(callback, delay_ms, user_data); // Create a timer
@@ -139,13 +148,14 @@ void init_main_menu_task(lv_timer_t *timer) {
 
   if (wifiEnable) {
     lv_obj_add_state(ui_MainMenu_Switch_Wifi, LV_STATE_CHECKED);
-    wifiConnect();
+    //wifiConnect();
+    wifi_check_timer = lv_timer_create(lvgl_wifi_check_cb, 5000, NULL);//wifi status check interval timer
+
   } else {//init wifi stack once to prevent Audio library crashed
     WiFi.mode(WIFI_STA);
     WiFi.disconnect(true);
     log_d("WiFi stack initialized");
   }
-  
 }
 
 // ################# App start here after screen initialized ##############################
@@ -744,22 +754,32 @@ void scanNetwork(lv_event_t *e) {
 //toggle wifi on/off
 void toggleWiFi(lv_event_t * e) {
   SCREEN_OFF_TIMER = millis(); // reset timer
-  if (wifiEnable) {
+
+  if (wifiEnable) {//disabled
     wifiEnable = false;
+    //delete wifi check timer
+    if (wifi_check_timer) lv_timer_del(wifi_check_timer);
+    if(wifiTaskHandle != NULL) {//kill wifi task
+      vTaskDelete(wifiTaskHandle);
+      wifiTaskHandle = NULL;
+    }
+ // lv_timer_pause(wifi_check_timer);
     WiFi.disconnectAsync();
     lv_label_set_text(ui_MainMenu_Label_connectStatus, "Disconnected");
     lv_obj_set_style_text_color(ui_MainMenu_Label_connectStatus, lv_color_hex(0xFF0000), LV_PART_MAIN);
     lv_obj_set_style_text_color(ui_Player_Label_WiFi, lv_color_hex(0x777777), LV_PART_MAIN);
     log_d("Delete Wifi Task");
-    if(wifiTaskHandle != NULL) {
-      vTaskDelete(wifiTaskHandle);
-      wifiTaskHandle = NULL;
-    }
-  } else {
+
+  } else {//enabled
+
     wifiEnable = true;
-    wifiConnect();
+    //wifiConnect();
+    //start wifi check timer
+    if (!wifi_check_timer) wifi_check_timer = lv_timer_create(lvgl_wifi_check_cb, 5000, NULL);//wifi status check interval timer
   }
 }
+
+
 
 //---------------------------------------
 void readKeyboard(lv_event_t *e) {

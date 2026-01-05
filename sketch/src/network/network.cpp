@@ -294,7 +294,7 @@ void scanWiFi(bool updateList) {
 //-----------------------------------------
 // wifi task -> check connection status and attemp to connect every 30 second
 void wifi_connect_task(void *param) {
-
+  
   while (wifi_need_connect) {
    
       if (WiFi.getMode() != WIFI_STA) WiFi.mode(WIFI_STA);

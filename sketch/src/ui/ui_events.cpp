@@ -701,7 +701,7 @@ void utilityMode(lv_event_t *e) {
   // performOnlineUpdate();
 }
 
-//--------------- CONFIGURATION  Menu ----------------------
+//-------------SAVE CONFIGURATION  Menu ----------------------
 // config screen close and save setting to preference
 void saveConfig(lv_event_t *e) {
   pref.begin("config", false);
@@ -722,7 +722,7 @@ void saveConfig(lv_event_t *e) {
   pref.putUChar("offset_hour", offset_hour_index);
   pref.putUChar("offset_minute", offset_minute_index);
   pref.putUChar("temp_unit", temp_unit);
-  // pref.putUChar("playing_mode", playMode);// no need, it save everytime toggle plyaing mode
+
   //wifienable
   pref.putBool("wifi_enable", wifiEnable);
 
@@ -759,23 +759,21 @@ void toggleWiFi(lv_event_t * e) {
     wifiEnable = false;
     //delete wifi check timer
     if (wifi_check_timer) lv_timer_del(wifi_check_timer);
-    if(wifiTaskHandle != NULL) {//kill wifi task
+    if(wifiTaskHandle != NULL) {//kill wifi_connect_task
       vTaskDelete(wifiTaskHandle);
       wifiTaskHandle = NULL;
     }
- // lv_timer_pause(wifi_check_timer);
     WiFi.disconnectAsync();
     lv_label_set_text(ui_MainMenu_Label_connectStatus, "Disconnected");
     lv_obj_set_style_text_color(ui_MainMenu_Label_connectStatus, lv_color_hex(0xFF0000), LV_PART_MAIN);
     lv_obj_set_style_text_color(ui_Player_Label_WiFi, lv_color_hex(0x777777), LV_PART_MAIN);
-    log_d("Delete Wifi Task");
+    log_d("WiFi Disconnected");
 
   } else {//enabled
 
     wifiEnable = true;
-    //wifiConnect();
     //start wifi check timer
-    if (!wifi_check_timer) wifi_check_timer = lv_timer_create(lvgl_wifi_check_cb, 5000, NULL);//wifi status check interval timer
+    wifi_check_timer = lv_timer_create(lvgl_wifi_check_cb, 5000, NULL);//wifi status check interval timer
   }
 }
 

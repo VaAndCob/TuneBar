@@ -126,25 +126,8 @@ static void WAVESHARE_349_lvgl_unlock(void) {
 }
 
 // ##########################################################
-/*
-void WAVESHARE_349_lvgl_port_task(void *arg) {
 
-   for (;;) {
-    process_ui_status_queue();
-    if (WAVESHARE_349_lvgl_lock(10)) {
-      
-      uint32_t next = lv_timer_handler();
-      esp_task_wdt_reset();
-      WAVESHARE_349_lvgl_unlock();
-      if (next < WAVESHARE_349_LVGL_TASK_MIN_DELAY_MS) next = WAVESHARE_349_LVGL_TASK_MIN_DELAY_MS;
-      if (next > WAVESHARE_349_LVGL_TASK_MAX_DELAY_MS) next = WAVESHARE_349_LVGL_TASK_MAX_DELAY_MS;
-      vTaskDelay(pdMS_TO_TICKS(next));
-    } else {
-      vTaskDelay(pdMS_TO_TICKS(10));
-    }
-  }
-}
-*/
+
 void WAVESHARE_349_lvgl_port_task(void *arg)
 {
    uint32_t task_delay_ms = WAVESHARE_349_LVGL_TASK_MAX_DELAY_MS;

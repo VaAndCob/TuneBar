@@ -252,7 +252,7 @@ ui_Info_Image_Turbine = lv_img_create(ui_Info_Panel_Weather);
 lv_img_set_src(ui_Info_Image_Turbine, &ui_img_weather_stack_png);
 lv_obj_set_width( ui_Info_Image_Turbine, LV_SIZE_CONTENT);  /// 96
 lv_obj_set_height( ui_Info_Image_Turbine, LV_SIZE_CONTENT);   /// 96
-lv_obj_set_x( ui_Info_Image_Turbine, 125 );
+lv_obj_set_x( ui_Info_Image_Turbine, 145 );
 lv_obj_set_y( ui_Info_Image_Turbine, 19 );
 lv_obj_set_align( ui_Info_Image_Turbine, LV_ALIGN_LEFT_MID );
 lv_obj_add_flag( ui_Info_Image_Turbine, LV_OBJ_FLAG_ADV_HITTEST );   /// Flags
@@ -262,7 +262,7 @@ ui_Info_Image_Propeller = lv_img_create(ui_Info_Panel_Weather);
 lv_img_set_src(ui_Info_Image_Propeller, &ui_img_weather_propeller_png);
 lv_obj_set_width( ui_Info_Image_Propeller, LV_SIZE_CONTENT);  /// 96
 lv_obj_set_height( ui_Info_Image_Propeller, LV_SIZE_CONTENT);   /// 96
-lv_obj_set_x( ui_Info_Image_Propeller, 101 );
+lv_obj_set_x( ui_Info_Image_Propeller, 122 );
 lv_obj_set_y( ui_Info_Image_Propeller, -9 );
 lv_obj_set_align( ui_Info_Image_Propeller, LV_ALIGN_LEFT_MID );
 lv_obj_add_flag( ui_Info_Image_Propeller, LV_OBJ_FLAG_ADV_HITTEST );   /// Flags

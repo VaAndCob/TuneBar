@@ -309,11 +309,17 @@ void process_audio_cmd_que() {
       UIStatusPayload payload = {
           .type = STATUS_UPDATE_TRACK_DESC_SET,
       };
-      if (wifiEnable) {
-        if (audio.connecttohost(msg.url_filename))
+      bool ok = false;
+      if (wifiEnable && WiFi.status() == WL_CONNECTED) {
+        if (audio.connecttohost(msg.url_filename)) {
             snprintf(payload.trackDesc, sizeof(payload.trackDesc),"%s",msg.stationName);
+            ok = true;
+         } else {
+          ok = false;
+         }
       
-      } else {
+      } 
+      if (!ok) {
         log_w("Failed to open url: %s", msg.stationName);
         audio.connecttoFS(LittleFS, "/audio/error.mp3");
         snprintf(payload.trackDesc, sizeof(payload.trackDesc),"Network connection unavailable.\nPlease reconnect to continue streaming.");

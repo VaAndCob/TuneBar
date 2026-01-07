@@ -1,0 +1,38 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "⚡ Decode ESP32 (Smart Paste)",
+            "type": "shell",
+            "windows": {
+                "command": "powershell",
+                "args": [
+                    "-NoProfile",
+                    "-Command",
+                    "$raw = '${input:backtraceAddresses}'; $clean = $raw -replace ':[0-9a-fA-Fx]+', ''; & '${userHome}\\.platformio\\packages\\toolchain-xtensa-esp32s3\\bin\\xtensa-esp32s3-elf-addr2line.exe' -e '${workspaceFolder}\\.pio\\build\\esp32-s3-devkitc1-n16r8\\firmware.elf' -f -C $clean.Split(' ', [StringSplitOptions]::RemoveEmptyEntries)"
+                ]
+            },
+            "osx": {
+                "command": "/bin/bash",
+                "args": [
+                    "-c",
+                    "ADDR2LINE=\"${userHome}/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-addr2line\"; ELF=\"${workspaceFolder}/.pio/build/esp32-s3-devkitc1-n16r8/firmware.elf\"; RAW=\"${input:backtraceAddresses}\"; CLEAN=$(python3 -c \"import sys; print(' '.join([s.split(':')[0] for s in sys.argv[1].split()]))\" \"$RAW\"); $ADDR2LINE -e \"$ELF\" -f -C $CLEAN"
+                ]
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "echo": false,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "backtraceAddresses",
+            "type": "promptString",
+            "description": "วาง Backtrace มาทั้งดุ้นได้เลย (ไม่ต้องลบ :xx ออก)"
+        }
+    ]
+}

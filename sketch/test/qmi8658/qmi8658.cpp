@@ -5,6 +5,7 @@
 
 static const char *TAG = "QMI8658";
 
+
 esp_err_t qmi8658_init(qmi8658_dev_t *dev, i2c_master_bus_handle_t bus_handle, uint8_t i2c_addr) {
     if (!dev || !bus_handle) return ESP_ERR_INVALID_ARG;
     

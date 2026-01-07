@@ -147,8 +147,15 @@ void rtc_read_task(void *param) {
     // read RTC
     if (rtc.getDateTime()) {
 
-      UIStatusPayload msg = {// prepare mesasge
-                             .type = STATUS_UPDATE_CLOCK, .hour = now.hour, .minute = now.minute, .second = now.second, .year = now.year, .month = now.month, .dayOfMonth = now.dayOfMonth, .dayOfWeek = now.dayOfWeek};
+      UIStatusPayload msg = {
+         .type = STATUS_UPDATE_CLOCK, 
+         .hour = now.hour, 
+         .minute = now.minute, 
+         .second = now.second, 
+         .year = now.year, 
+         .month = now.month, 
+         .dayOfMonth = now.dayOfMonth, 
+         .dayOfWeek = now.dayOfWeek};
       xQueueSend(ui_status_queue, &msg, 100); // send message
 
     } else {
@@ -159,10 +166,39 @@ void rtc_read_task(void *param) {
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(1000)); // 1 second update
   }
 }
-//----------------------------------------------------
 
-// Playing status task
-// convert track time
+//==============================================
+
+// TASK: Acceleroometer + Gyro
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ========================================================================
+// TASK: AUDIO
+
+// Helper function convert track time second -> hh:mm:ss
 void timeStr(char *buffer, size_t size, uint32_t second) {
   uint8_t h = second / 3600;
   uint8_t m = (second % 3600) / 60;
@@ -174,7 +210,7 @@ void timeStr(char *buffer, size_t size, uint32_t second) {
   }
 }
 
-// AUDIO TASK  ========================================================================
+
 // ---------- GLOBAL RECORDING STATE ----------
 static const size_t SAMPLE_RATE = 48000; // or 16000 – choose ONE
 static const size_t RECORD_SECONDS = 5;
@@ -187,6 +223,7 @@ static int16_t *speech_buffer = nullptr; // persistent buffer
 static size_t speech_ptr = 0; // write cursor (bytes)
 static bool speech_ready = false; // flag says buffer is valid
 //------------------------------------
+/*
 void init_audio_buffers() {
   if (!speech_buffer) {
     speech_buffer = (int16_t *)heap_caps_malloc(MAX_REC_SIZE, MALLOC_CAP_SPIRAM);
@@ -281,7 +318,7 @@ void playRecordedAudio() {
   speech_ptr = 0;
 }
 
-/*
+
 void startRecording() {
     if (audio.isRunning()) {
         audio.stopSong(); // หยุดเล่นเพลงก่อน
@@ -299,7 +336,7 @@ void startRecording() {
     is_mic_mode = true;
     log_i("Recording Started at 16kHz");
 }
-*/
+
 
 // stereo 48k -> mono 16k (simple decimation, no filter)
 void downsample48kTo16k(int16_t *in48k, size_t frames48k, int16_t *out16k, size_t &frames16k) {
@@ -318,7 +355,8 @@ void stopRecording(size_t length) {
 
   playRecordedAudio();
 }
-
+*/
+//--------------------------------
 // audio information callback
 void my_audio_info(Audio::msg_t m) {
 
@@ -378,7 +416,7 @@ void audio_loop_task(void *param) {
       process_audio_cmd_que();
       vTaskDelayUntil(&lastWakeTime, period);
 
-      // ... (โค้ด Update UI เดิมของคุณ เก็บไว้เหมือนเดิม) ...
+     
       if (audio.isRunning()) {
 
         current_pos = audio.getAudioCurrentTime();
@@ -455,6 +493,7 @@ void audio_loop_task(void *param) {
     }
 
     // ---------RECORD MODE-------------------------
+   /*
     else {
       auto rx_handle = audio.getRxHandle();
       if (!rx_handle) {
@@ -487,7 +526,7 @@ void audio_loop_task(void *param) {
           int16_t R = stereo_temp[i * 2 + 1];
           log_i("%d,%d\n", L, R);
       }
-       */
+       
       if (err == ESP_OK && bytes_read >= 4) {
 
         size_t frames = bytes_read / 4; // 4 bytes per stereo frame
@@ -522,7 +561,7 @@ void audio_loop_task(void *param) {
 
       vTaskDelay(1);
     }
-
+    */
     //-------------------------------
   } // for(;;)
 } // audio loop task

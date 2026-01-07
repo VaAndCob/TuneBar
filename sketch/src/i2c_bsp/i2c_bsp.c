@@ -44,7 +44,7 @@ void i2c_master_Init(void)
   i2c_device_config_t dev_cfg = 
   {
     .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-    .scl_speed_hz = 1000000,
+    .scl_speed_hz = 400000, //400 khz
   };
 
   dev_cfg.device_address = WAVESHARE_349_ADC_ADDR;  // ES7210 addr
@@ -53,16 +53,16 @@ void i2c_master_Init(void)
   dev_cfg.device_address = WAVESHARE_349_EXPANDER_ADDR;  // TCA9554 addr
  ESP_ERROR_CHECK(i2c_master_bus_add_device(user_i2c_port0_handle, &dev_cfg, &tca9554_dev_handle));
 
-  dev_cfg.device_address = WAVESHARE_349_CODEC_ADDR;
+  dev_cfg.device_address = WAVESHARE_349_CODEC_ADDR; // ES8311
   ESP_ERROR_CHECK(i2c_master_bus_add_device(user_i2c_port0_handle, &dev_cfg, &es8311_dev_handle));
 
-  dev_cfg.device_address = WAVESHARE_349_RTC_ADDR;
+  dev_cfg.device_address = WAVESHARE_349_RTC_ADDR; // PCF85063
   ESP_ERROR_CHECK(i2c_master_bus_add_device(user_i2c_port0_handle, &dev_cfg, &rtc_dev_handle));
 
-  dev_cfg.device_address = WAVESHARE_349_IMU_ADDR;
+  dev_cfg.device_address = WAVESHARE_349_IMU_ADDR; // QMI8658
   ESP_ERROR_CHECK(i2c_master_bus_add_device(user_i2c_port0_handle, &dev_cfg, &imu_dev_handle));
 
-  dev_cfg.device_address = I2C_TOUCH_ADDR;
+  dev_cfg.device_address = I2C_TOUCH_ADDR; // AXS1523B
   ESP_ERROR_CHECK(i2c_master_bus_add_device(user_i2c_port1_handle, &dev_cfg, &disp_touch_dev_handle));
 
 }

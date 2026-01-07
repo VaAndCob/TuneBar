@@ -27,7 +27,6 @@ bool wifiEnable = false;
 bool wifi_need_connect = false;
 lv_timer_t *wifi_check_timer = NULL;
 
-
 //-----------------------------------------------------------
 // Enable mbedTLS to use PSRAM for dynamic memory allocation instead of internal RAM
 // due to limited internal RAM size on ESP32 must larger than 40kb for TLS operation
@@ -45,177 +44,169 @@ void enableTlsInPsram() {
 
 // sanitize wifi ssid
 static void sanitize_string(char *s) {
-    if (!s) return;
+  if (!s) return;
 
-    char *dst = s;
-    for (char *src = s; *src; src++) {
-        uint8_t c = (uint8_t)*src;
-        if (c >= 32 && c != 127) {  // keep printable ASCII only
-            *dst++ = *src;
-        }
+  char *dst = s;
+  for (char *src = s; *src; src++) {
+    uint8_t c = (uint8_t)*src;
+    if (c >= 32 && c != 127) { // keep printable ASCII only
+      *dst++ = *src;
     }
-    *dst = '\0';
+  }
+  *dst = '\0';
 
-    // Trim trailing spaces
-    while (dst > s && isspace((unsigned char)dst[-1])) {
-        *--dst = '\0';
-    }
+  // Trim trailing spaces
+  while (dst > s && isspace((unsigned char)dst[-1])) {
+    *--dst = '\0';
+  }
 }
 
-// compare ssid 
+// compare ssid
 static bool ssid_equals(const char *a, const char *b) {
-    if (!a || !b) return false;
-    return strcmp(a, b) == 0;
+  if (!a || !b) return false;
+  return strcmp(a, b) == 0;
 }
 
 // load wifi credential from wifi.json
 int loadWifiList(WifiEntry list[]) {
-    if (!LittleFS.exists(WIFI_FILE)) {
-        log_w("wifi.json not found → creating empty list");
-        File f = LittleFS.open(WIFI_FILE, "w");
-        if (f) {
-            f.print("[]");
-            f.close();
-        }
-        return 0;
+  if (!LittleFS.exists(WIFI_FILE)) {
+    log_w("wifi.json not found → creating empty list");
+    File f = LittleFS.open(WIFI_FILE, "w");
+    if (f) {
+      f.print("[]");
+      f.close();
     }
+    return 0;
+  }
 
-    File f = LittleFS.open(WIFI_FILE, "r");
-    if (!f) {
-        log_e("Failed to open wifi.json");
-        return 0;
+  File f = LittleFS.open(WIFI_FILE, "r");
+  if (!f) {
+    log_e("Failed to open wifi.json");
+    return 0;
+  }
+
+  static JsonDocument doc;
+  doc.clear();
+  DeserializationError err = deserializeJson(doc, f);
+  f.close();
+
+  if (err || !doc.is<JsonArray>()) {
+    log_w("wifi.json invalid → reset");
+    File f2 = LittleFS.open(WIFI_FILE, "w");
+    if (f2) {
+      f2.print("[]");
+      f2.close();
     }
+    return 0;
+  }
 
-    static JsonDocument doc;
-    doc.clear();
-    DeserializationError err = deserializeJson(doc, f);
-    f.close();
+  int count = 0;
 
-    if (err || !doc.is<JsonArray>()) {
-        log_w("wifi.json invalid → reset");
-        File f2 = LittleFS.open(WIFI_FILE, "w");
-        if (f2) {
-            f2.print("[]");
-            f2.close();
-        }
-        return 0;
-    }
+  for (JsonObject obj : doc.as<JsonArray>()) {
+    if (count >= WIFI_MAX) break;
 
-    int count = 0;
+    const char *ssid = obj["ssid"];
+    const char *password = obj["password"];
 
-    for (JsonObject obj : doc.as<JsonArray>()) {
-        if (count >= WIFI_MAX) break;
+    if (!ssid || !*ssid) continue;
 
-        const char *ssid = obj["ssid"];
-        const char *password = obj["password"];
+    strncpy(list[count].ssid, ssid, sizeof(list[count].ssid) - 1);
+    strncpy(list[count].password, password ? password : "", sizeof(list[count].password) - 1);
 
-        if (!ssid || !*ssid) continue;
+    list[count].ssid[sizeof(list[count].ssid) - 1] = '\0';
+    list[count].password[sizeof(list[count].password) - 1] = '\0';
 
-        strncpy(list[count].ssid, ssid, sizeof(list[count].ssid) - 1);
-        strncpy(list[count].password, password ? password : "",sizeof(list[count].password) - 1);
+    sanitize_string(list[count].ssid);
+    sanitize_string(list[count].password);
 
-        list[count].ssid[sizeof(list[count].ssid) - 1] = '\0';
-        list[count].password[sizeof(list[count].password) - 1] = '\0';
-
-        sanitize_string(list[count].ssid);
-        sanitize_string(list[count].password);
-
-        log_d("WiFi[%d] SSID='%s'", count, list[count].ssid);
-        count++;
-    }
-    return count;
+    log_d("WiFi[%d] SSID='%s'", count, list[count].ssid);
+    count++;
+  }
+  return count;
 }
-
 
 // SAVE WIFI LIST
 void saveWifiList(const WifiEntry list[], int count) {
-    static JsonDocument doc;
-    doc.clear();
-    JsonArray arr = doc.to<JsonArray>();
+  static JsonDocument doc;
+  doc.clear();
+  JsonArray arr = doc.to<JsonArray>();
 
-    for (int i = 0; i < count; i++) {
-        if (!list[i].ssid[0]) continue;
+  for (int i = 0; i < count; i++) {
+    if (!list[i].ssid[0]) continue;
 
-        JsonObject o = arr.add<JsonObject>();
-        o["ssid"] = list[i].ssid;
-        o["password"] = list[i].password;
-    }
-    File f = LittleFS.open(WIFI_FILE, "w");
-    if (!f) {
-        log_e("Failed to write wifi.json");
-        return;
-    }
-    serializeJson(doc, f);
-    f.close();
-    log_d("Saved %d WiFi entries", count);
+    JsonObject o = arr.add<JsonObject>();
+    o["ssid"] = list[i].ssid;
+    o["password"] = list[i].password;
+  }
+  File f = LittleFS.open(WIFI_FILE, "w");
+  if (!f) {
+    log_e("Failed to write wifi.json");
+    return;
+  }
+  serializeJson(doc, f);
+  f.close();
+  log_d("Saved %d WiFi entries", count);
 }
-
 
 // ADD / UPDATE ENTRY
-int addOrUpdateWifi(
-    const char *newSSID,
-    const char *newPassword,
-    WifiEntry list[],
-    int count
-) {
-    if (!newSSID || !*newSSID) return count;
+int addOrUpdateWifi(const char *newSSID, const char *newPassword, WifiEntry list[], int count) {
+  if (!newSSID || !*newSSID) return count;
 
-    char ssid[64];
-    char password[64];
+  char ssid[64];
+  char password[64];
 
-    strncpy(ssid, newSSID, sizeof(ssid) - 1);
-    strncpy(password, newPassword ? newPassword : "", sizeof(password) - 1);
-    ssid[sizeof(ssid) - 1] = '\0';
-    password[sizeof(password) - 1] = '\0';
+  strncpy(ssid, newSSID, sizeof(ssid) - 1);
+  strncpy(password, newPassword ? newPassword : "", sizeof(password) - 1);
+  ssid[sizeof(ssid) - 1] = '\0';
+  password[sizeof(password) - 1] = '\0';
 
-    sanitize_string(ssid);
-    sanitize_string(password);
+  sanitize_string(ssid);
+  sanitize_string(password);
 
-    log_i("Adding/Updating WiFi: '%s':'%s'", ssid,password);
+  log_i("Adding/Updating WiFi: '%s':'%s'", ssid, password);
 
-    // 1) Find existing
-    int found = -1;
-    for (int i = 0; i < count; i++) {
-        if (ssid_equals(list[i].ssid, ssid)) {
-            found = i;
-            break;
-        }
+  // 1) Find existing
+  int found = -1;
+  for (int i = 0; i < count; i++) {
+    if (ssid_equals(list[i].ssid, ssid)) {
+      found = i;
+      break;
     }
+  }
 
-    // 2) Prepare new entry
-    WifiEntry entry{};
-    strncpy(entry.ssid, ssid, sizeof(entry.ssid) - 1);
-    strncpy(entry.password, password, sizeof(entry.password) - 1);
+  // 2) Prepare new entry
+  WifiEntry entry{};
+  strncpy(entry.ssid, ssid, sizeof(entry.ssid) - 1);
+  strncpy(entry.password, password, sizeof(entry.password) - 1);
 
-    // 3) Remove old copy if exists
-    if (found >= 0) {
-        log_d("Updating existing SSID at index %d", found);
-        for (int i = found; i > 0; i--) {
-            list[i] = list[i - 1];
-        }
-        list[0] = entry;
-        return count;
-    }
-
-    // 4) New entry
-    log_d("Adding new SSID");
-
-    if (count < WIFI_MAX) {
-        for (int i = count; i > 0; i--) {
-            list[i] = list[i - 1];
-        }
-        list[0] = entry;
-        return count + 1;
-    }
-
-    // 5) List full → drop oldest
-    for (int i = WIFI_MAX - 1; i > 0; i--) {
-        list[i] = list[i - 1];
+  // 3) Remove old copy if exists
+  if (found >= 0) {
+    log_d("Updating existing SSID at index %d", found);
+    for (int i = found; i > 0; i--) {
+      list[i] = list[i - 1];
     }
     list[0] = entry;
-    return WIFI_MAX;
-}
+    return count;
+  }
 
+  // 4) New entry
+  log_d("Adding new SSID");
+
+  if (count < WIFI_MAX) {
+    for (int i = count; i > 0; i--) {
+      list[i] = list[i - 1];
+    }
+    list[0] = entry;
+    return count + 1;
+  }
+
+  // 5) List full → drop oldest
+  for (int i = WIFI_MAX - 1; i > 0; i--) {
+    list[i] = list[i - 1];
+  }
+  list[0] = entry;
+  return WIFI_MAX;
+}
 
 // Discovery wifi network
 void scanWiFi(bool updateList) {
@@ -294,119 +285,128 @@ void scanWiFi(bool updateList) {
 //-----------------------------------------
 // wifi task -> check connection status and attemp to connect every 30 second
 void wifi_connect_task(void *param) {
-  
-  while (wifi_need_connect) {
-   
-      if (WiFi.getMode() != WIFI_STA) WiFi.mode(WIFI_STA);
-      vTaskDelay(pdMS_TO_TICKS(100));
-      uint8_t wifiCount = loadWifiList(wifiList);
-      log_d("Loaded %d Wi-Fi credentials", wifiCount);
-      updateWiFiStatus("Scanning...", 0x00FF00, 0x777777);
 
-      scanWiFi(false); // scan wifi but don't update dropdown
-      if (networks == 0) { // no network in this area
-        log_d("No Wi-Fi networks found");
-        updateWiFiStatus("No Wi-Fi networks found.", 0xFF0000, 0x777777);
+  while (wifi_need_connect) {
+
+    if (WiFi.getMode() != WIFI_STA) WiFi.mode(WIFI_STA);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    uint8_t wifiCount = loadWifiList(wifiList);
+    log_d("Loaded %d Wi-Fi credentials", wifiCount);
+    updateWiFiStatus("Scanning...", 0x00FF00, 0x777777);
+
+    scanWiFi(false); // scan wifi but don't update dropdown
+    if (networks == 0) { // no network in this area
+      log_d("No Wi-Fi networks found");
+      updateWiFiStatus("No Wi-Fi networks found.", 0xFF0000, 0x777777);
+      vTaskDelay(pdMS_TO_TICKS(300));
+
+    } else {
+
+      // check matching network with the list in wifi.json
+      uint8_t matchIndex[10]; // keep the index of match ssid from wifiList.ssid
+      uint8_t matchCount = 0;
+      for (byte i = 0; i < networks; ++i) {
+        char ss[64];
+        strncpy(ss, WiFi.SSID(i).c_str(), sizeof(ss) - 1);
+        ss[sizeof(ss) - 1] = '\0';
+
+        log_d("Checking SSID: %s", ss);
+        for (int k = 0; k < wifiCount; ++k) {
+
+          char stored[64];
+          strncpy(stored, wifiList[k].ssid, sizeof(stored) - 1);
+          stored[sizeof(stored) - 1] = '\0';
+          log_d("Stored SSID: %s", stored);
+
+          if (strcmp(stored, ss) == 0) {
+            if (matchCount < sizeof(matchIndex)) {
+              matchIndex[matchCount++] = k;
+              log_d("Match found: %s", ss.c_str());
+            } else {
+              log_w("More matches than buffer; ignoring extras");
+            }
+          }
+        }
+      } // for
+
+      log_d("Total match: %d", matchCount);
+
+      if (matchCount == 0) {
+        log_d("No network matched.");
+        updateWiFiStatus("No network matched.", 0xFF0000, 0x777777);
         vTaskDelay(pdMS_TO_TICKS(300));
 
       } else {
 
-        // check matching network with the list in wifi.json
-        uint8_t matchIndex[10]; // keep the index of match ssid from wifiList.ssid
-        uint8_t matchCount = 0;
-        for (byte i = 0; i < networks; ++i) {
-          char ss[64];
-          strncpy(ss, WiFi.SSID(i).c_str(), sizeof(ss) - 1);
-          ss[sizeof(ss) - 1] = '\0';
+        // try to connect all matched wifi ssid
+        for (uint8_t idx = 0; idx < matchCount; idx++) {
+          char networkName[64];
+          strncpy(networkName, wifiList[matchIndex[idx]].ssid, sizeof(networkName) - 1);
+          networkName[sizeof(networkName) - 1] = '\0';
 
-          log_d("Checking SSID: %s", ss);
-          for (int k = 0; k < wifiCount; ++k) {
+          char attemptMsg[128];
+          snprintf(attemptMsg, sizeof(attemptMsg), "Attempt connecting to %s", networkName);
+          log_i("%s", attemptMsg);
+          updateWiFiStatus(attemptMsg, 0x00FF00, 0x0000FF);
 
-            char stored[64];
-            strncpy(stored, wifiList[k].ssid, sizeof(stored) - 1);
-            stored[sizeof(stored) - 1] = '\0';
-            log_d("Stored SSID: %s", stored);
+          // attempt to connect wifi
+          if (WiFi.status() == WL_CONNECTED) WiFi.disconnect(true);
+          vTaskDelay(pdMS_TO_TICKS(100));
+          WiFi.begin(wifiList[matchIndex[idx]].ssid, wifiList[matchIndex[idx]].password);
 
-            if (strcmp(stored, ss) == 0) {
-              if (matchCount < sizeof(matchIndex)) {
-                matchIndex[matchCount++] = k;
-                log_d("Match found: %s", ss.c_str());
-              } else {
-                log_w("More matches than buffer; ignoring extras");
-              }
-            }
+          unsigned long startAttemptTime = millis();
+          while (WiFi.status() != WL_CONNECTED && (millis() - startAttemptTime < WIFI_CONNECT_TIMEOUT_MS)) {
+            vTaskDelay(pdMS_TO_TICKS(500)); // shorter step for snappier responsiveness
+            log_d(".");
           }
-        } // for
+          // check wifi connection status
+          if (WiFi.status() == WL_CONNECTED) {
+            char connectedMsg[128];
+            IPAddress ip = WiFi.localIP();
+            snprintf(connectedMsg, sizeof(connectedMsg), "Connected to %s (IP: %u.%u.%u.%u)", networkName, ip[0], ip[1], ip[2], ip[3]);
+            log_i("%s", connectedMsg);
+            updateWiFiStatus(connectedMsg, 0x00FF00, 0x0000FF);
 
-        log_d("Total match: %d", matchCount);
+            rtc.ntp_sync(UTC_offset_hour[offset_hour_index], UTC_offset_minute[offset_minute_index]);
+            rtc.calibratBySeconds(0, 0.0); // mode 0 (eery 2 second, diff_time/total_calibrate_time)
+            // check if new firmware available
 
-        if (matchCount == 0) {
-          log_d("No network matched.");
-          updateWiFiStatus("No network matched.", 0xFF0000, 0x777777);
-          vTaskDelay(pdMS_TO_TICKS(300));
+            if (!firmware_checked) {
+              const char *latestVer = newFirmwareAvailable(); // get new firmware version
+              if (latestVer != NULL) {
+                notifyUpdate(latestVer); // notify user
+              } // newfirmwareAvailable
+            } // firmware checked
+            updateWeatherPanel(); // update weather condition once after internet connected
 
-        } else {
+          } else { // Wifi not connected
+            log_w("Wrong Wi-Fi password or timeout for %s", networkName);
+            updateWiFiStatus("Wrong Wi-Fi password or timeout", 0xFF0000, 0x777777);
+          }
+        } // for each match
+      } // If we
+    }
 
-          // try to connect all matched wifi ssid
-          for (uint8_t idx = 0; idx < matchCount; idx++) {
-            char networkName[64];
-            strncpy(networkName, wifiList[matchIndex[idx]].ssid, sizeof(networkName) - 1);
-            networkName[sizeof(networkName) - 1] = '\0';
+    if (WiFi.status() == WL_CONNECTED) {
+      wifi_need_connect = false;
 
-            char attemptMsg[128];
-            snprintf(attemptMsg, sizeof(attemptMsg), "Attempt connecting to %s", networkName);
-            log_i("%s", attemptMsg);
-            updateWiFiStatus(attemptMsg, 0x00FF00, 0x0000FF);
-
-            // attempt to connect wifi
-            if (WiFi.status() == WL_CONNECTED) WiFi.disconnect(true);
-            vTaskDelay(pdMS_TO_TICKS(100));
-            WiFi.begin(wifiList[matchIndex[idx]].ssid, wifiList[matchIndex[idx]].password);
-
-            unsigned long startAttemptTime = millis();
-            while (WiFi.status() != WL_CONNECTED && (millis() - startAttemptTime < WIFI_CONNECT_TIMEOUT_MS)) {
-              vTaskDelay(pdMS_TO_TICKS(500)); // shorter step for snappier responsiveness
-              log_d(".");
+      lv_async_call(
+          [](void *param) {
+            lv_timer_t *timer = (lv_timer_t *)param;
+            if (timer) {
+              lv_timer_resume(timer);//resume wifi check timer
             }
-            // check wifi connection status
-            if (WiFi.status() == WL_CONNECTED) {
-              char connectedMsg[128];
-              IPAddress ip = WiFi.localIP();
-              snprintf(connectedMsg, sizeof(connectedMsg), "Connected to %s (IP: %u.%u.%u.%u)",  networkName, ip[0], ip[1], ip[2], ip[3]);
-              log_i("%s", connectedMsg);
-              updateWiFiStatus(connectedMsg, 0x00FF00, 0x0000FF);
+          },
+          wifi_check_timer);
 
-              rtc.ntp_sync(UTC_offset_hour[offset_hour_index], UTC_offset_minute[offset_minute_index]);
-              rtc.calibratBySeconds(0, 0.0); // mode 0 (eery 2 second, diff_time/total_calibrate_time)
-              // check if new firmware available
-              
-              if (!firmware_checked) {
-                const char *latestVer = newFirmwareAvailable();//get new firmware version
-                if (latestVer != NULL) {
-                   notifyUpdate(latestVer);//notify user
-                } // newfirmwareAvailable
-              } // firmware checked
-              updateWeatherPanel(); // update weather condition once after internet connected
-
-            } else { // Wifi not connected
-              log_w("Wrong Wi-Fi password or timeout for %s", networkName);
-              updateWiFiStatus("Wrong Wi-Fi password or timeout", 0xFF0000, 0x777777);
-            }
-          } // for each match
-        } // If we
-      }
-
-         if (WiFi.status() == WL_CONNECTED) {
-            wifi_need_connect = false;
-            lv_timer_resume(wifi_check_timer);//resume timer
-            break;
-        }
+      break;
+    }
     UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
     log_d("{ Task stack remaining MIN: %u bytes }", hwm);
     vTaskDelay(pdMS_TO_TICKS(30000));
   }
-    wifiTaskHandle = NULL;
-    vTaskDelete(NULL);
+  wifiTaskHandle = NULL;
+  vTaskDelete(NULL);
 }
 // global wifi connect
 void wifiConnect() {

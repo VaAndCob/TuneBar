@@ -27,6 +27,7 @@ bool paused = false;
 uint8_t wallpaperIndex = 0;
 bool mute = false;
 
+#define WIFI_CHECK_INTERVAL 5000 //wifi connection checking interval 5 second.
 
 // set wallpaper dropdown menu
 const char *wallpaper_menu = "None\nThailand\nChristmas1\nChristmas2\nFuture\nNature\nUser1\nUser2\nUser3\nUser4\nUser5";
@@ -149,7 +150,7 @@ void init_main_menu_task(lv_timer_t *timer) {
   if (wifiEnable) {
     lv_obj_add_state(ui_MainMenu_Switch_Wifi, LV_STATE_CHECKED);
     //wifiConnect();
-    wifi_check_timer = lv_timer_create(lvgl_wifi_check_cb, 5000, NULL);//wifi status check interval timer
+    wifi_check_timer = lv_timer_create(lvgl_wifi_check_cb, WIFI_CHECK_INTERVAL, NULL);//wifi status check interval timer
 
   } else {//init wifi stack once to prevent Audio library crashed
     WiFi.mode(WIFI_STA);
@@ -486,11 +487,11 @@ void setBrightness(lv_event_t *e) {
 }
 
 // turn on screen by double tap
-#define DOUBLE_CLICK_SPEED 1000
+#define DOUBLE_TAP_SPEED 1000
 void turnonScreen(lv_event_t *e) {
   static uint32_t last_click_time = 0;
   uint32_t current_time = lv_tick_get();
-  if(current_time - last_click_time < DOUBLE_CLICK_SPEED) {
+  if(current_time - last_click_time < DOUBLE_TAP_SPEED) {
        last_click_time = 0;
       log_d("screen on");
       switch (backlight_state) {
@@ -773,7 +774,7 @@ void toggleWiFi(lv_event_t * e) {
 
     wifiEnable = true;
     //start wifi check timer
-    wifi_check_timer = lv_timer_create(lvgl_wifi_check_cb, 5000, NULL);//wifi status check interval timer
+    wifi_check_timer = lv_timer_create(lvgl_wifi_check_cb, WIFI_CHECK_INTERVAL, NULL);//wifi status check interval timer
   }
 }
 

@@ -43,6 +43,8 @@
 #include "tca9554/tca9554.h" // io expander
 #include "weather/weather.h" // weather air quality widget
 #include "network/network.h" // wifi network
+//#include "qmi8658/qmi8658.h" // imu
+
 
 extern Audio audio;
 ES8311 speaker; // ES8322 (DAC)  →  I2S_NUM_0  (TX)
@@ -125,7 +127,7 @@ void setup() {
 
 
  if (mic.init()) {
-    log_i("ES7210 OK"); // <--- ถ้าไม่ขึ้นอันนี้ แปลว่า I2C ติดต่อไม่ได้
+    log_i("ES7210 OK");
   } else {
     log_e("ES7210 FAILED to Initialize");
   }
@@ -135,7 +137,7 @@ void setup() {
   xTaskCreatePinnedToCore(rtc_read_task, "getDateTimeTask", 3 * 1024, NULL, 3, NULL, 1);
   xTaskCreatePinnedToCore(button_input_task, "buttonInputTask", 2 * 1024, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(batt_level_read_task, "readBatteryLevel", 2 * 1024, NULL, 1, NULL, 1);
-  //xTaskCreatePinnedToCore(imu_read_task, "imu_read_task", 3 * 1024, NULL , 1, NULL,1);
+  //xTaskCreatePinnedToCore(imu_read_task, "imu_read_task", 2 * 1024, NULL , 1, NULL,1);
 
 
 }

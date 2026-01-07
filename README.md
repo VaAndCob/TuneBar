@@ -36,7 +36,7 @@ This project integrates a versatile music player and internet radio with practic
 *   **Connectivity**: 2.4GHz Wi-Fi & Bluetooth 5 (LE)
 *   Core audio functionality is powered by the [ESP32-audioI2S](https://github.com/schreibfaul1/ESP32-audioI2S) library.
 
-## 🛒 Where to Buy (affiliate) [AliExpress](https://s.click.aliexpress.com/e/_c3ML7dDr)
+## 🛒 Where to Buy (affiliate) [AliExpress](https://s.click.aliexpress.com/e/_c3F0TxcJ)
 
 ## ℹ️ Resources [Waveshare Wiki](http://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-3.49)
 

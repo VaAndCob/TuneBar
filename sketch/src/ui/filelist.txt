@@ -6,8 +6,7 @@ screens/ui_Screen_Utility.c
 ui.c
 components/ui_comp_hook.c
 ui_helpers.c
-images/ui_img_images_vaandcobbanner_png.c
-images/ui_img_images_tunebar_png.c
+images/ui_img_images_tunebar_banner_png.c
 images/ui_img_images_livestreaming_png.c
 images/ui_img_images_music_png.c
 images/ui_img_images_assistant_png.c

@@ -13,6 +13,7 @@ Preferences pref;
 #include "updater/updater.h"
 #include "weather/weather.h"
 #include <LittleFS.h>
+#include "lvgl_port/lvgl_port.h"
 
 #include "ESP32-audioI2S-master/Audio.h"
 #include "es7210/es7210.h"
@@ -53,7 +54,7 @@ void lv_create_delayed_task(lv_timer_cb_t callback, uint32_t delay_ms, void *use
 // initalize lvgl ui
 void init_main_menu_task(lv_timer_t *timer) {
   lv_timer_del(timer);
-  lv_scr_load_anim(ui_Screen_MainMenu, LV_SCR_LOAD_ANIM_FADE_IN, 500, 0, true); // delete old screen
+  lv_scr_load_anim(ui_Screen_MainMenu, LV_SCR_LOAD_ANIM_FADE_IN, 1000, 0, true); // delete old screen
 
   // init widgets
   lv_label_set_text(ui_Player_Label_Label1, LV_SYMBOL_VOLUME_MAX);
@@ -499,10 +500,10 @@ void turnonScreen(lv_event_t *e) {
       case 1: setUpduty(LCD_PWM_MODE_150); break;
       case 2: setUpduty(LCD_PWM_MODE_255); break;
       }
-    lv_obj_add_flag(ui_Player_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // hide blind panel
-    lv_obj_add_flag(ui_MainMenu_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // hide blind panel
-    lv_obj_add_flag(ui_Info_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // hide blind panel
-    lv_obj_add_flag(ui_Utility_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // unhide blind panel
+      UIStatusPayload msg = {
+        .type = STATUS_SCREEN_UNLOCK,
+      };
+      xQueueSend(ui_status_queue, &msg, 100); // send message
     resetScreenOffTimer(NULL);
   }
   last_click_time = current_time;  

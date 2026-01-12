@@ -13,6 +13,7 @@ Preferences pref;
 #include "updater/updater.h"
 #include "weather/weather.h"
 #include <LittleFS.h>
+#include "lvgl_port/lvgl_port.h"
 
 #include "ESP32-audioI2S-master/Audio.h"
 #include "es7210/es7210.h"
@@ -27,6 +28,7 @@ bool paused = false;
 uint8_t wallpaperIndex = 0;
 bool mute = false;
 
+#define WIFI_CHECK_INTERVAL 5000 //wifi connection checking interval 5 second.
 
 // set wallpaper dropdown menu
 const char *wallpaper_menu = "None\nThailand\nChristmas1\nChristmas2\nFuture\nNature\nUser1\nUser2\nUser3\nUser4\nUser5";
@@ -34,7 +36,16 @@ const char *wallpaper_menu = "None\nThailand\nChristmas1\nChristmas2\nFuture\nNa
 const lv_img_dsc_t *wallpaper_list[6] = {
     NULL, &ui_img_wallpaper_thailand_png, &ui_img_wallpaper_christmas1_png, &ui_img_wallpaper_christmas2_png, &ui_img_wallpaper_future_png, &ui_img_wallpaper_nature_png,
 };
-
+//wifi monitor call back from timer
+void lvgl_wifi_check_cb(lv_timer_t *t) {
+  if (wifiEnable) {//if enable
+    if (WiFi.status() != WL_CONNECTED && wifiTaskHandle == NULL) {//wifi disconnected
+        wifi_need_connect = true;
+        lv_timer_pause(wifi_check_timer);//pause the timer
+        wifiConnect();  // create task ONCE
+    }
+  }  
+}
 //----------- LOGO SCREEN EVENTS ------------
 void lv_create_delayed_task(lv_timer_cb_t callback, uint32_t delay_ms, void *user_data) {
   lv_timer_t *timer = lv_timer_create(callback, delay_ms, user_data); // Create a timer
@@ -109,8 +120,7 @@ void init_main_menu_task(lv_timer_t *timer) {
   } else { // lat,long
 
     char qp_copy[64];
-    strncpy(qp_copy, query_parameter, sizeof(qp_copy));
-    qp_copy[sizeof(qp_copy) - 1] = '\0'; // safety
+    snprintf(qp_copy, sizeof(qp_copy), "%s", query_parameter);
     char *comma = strchr(qp_copy, ',');
     if (comma != NULL) {
       *comma = '\0';
@@ -132,10 +142,22 @@ void init_main_menu_task(lv_timer_t *timer) {
   temp_unit = pref.getUChar("temp_unit", 0); // degree C
   lv_roller_set_selected(ui_MainMenu_Roller_Unit, temp_unit, LV_ANIM_OFF); // set index
 
-  pref.end();
+  //wifi enable
+  wifiEnable = pref.getBool("wifi_enable", true);
 
+  pref.end();
   SCREEN_OFF_TIMER = millis(); // reset timer
-  wifiConnect();
+
+  if (wifiEnable) {
+    lv_obj_add_state(ui_MainMenu_Switch_Wifi, LV_STATE_CHECKED);
+    //wifiConnect();
+    wifi_check_timer = lv_timer_create(lvgl_wifi_check_cb, WIFI_CHECK_INTERVAL, NULL);//wifi status check interval timer
+
+  } else {//init wifi stack once to prevent Audio library crashed
+    WiFi.mode(WIFI_STA);
+    WiFi.disconnect(true);
+    log_d("WiFi stack initialized");
+  }
 }
 
 // ################# App start here after screen initialized ##############################
@@ -466,11 +488,11 @@ void setBrightness(lv_event_t *e) {
 }
 
 // turn on screen by double tap
-#define DOUBLE_CLICK_SPEED 1000
+#define DOUBLE_TAP_SPEED 1000
 void turnonScreen(lv_event_t *e) {
   static uint32_t last_click_time = 0;
   uint32_t current_time = lv_tick_get();
-  if(current_time - last_click_time < DOUBLE_CLICK_SPEED) {
+  if(current_time - last_click_time < DOUBLE_TAP_SPEED) {
        last_click_time = 0;
       log_d("screen on");
       switch (backlight_state) {
@@ -478,10 +500,10 @@ void turnonScreen(lv_event_t *e) {
       case 1: setUpduty(LCD_PWM_MODE_150); break;
       case 2: setUpduty(LCD_PWM_MODE_255); break;
       }
-    lv_obj_add_flag(ui_Player_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // hide blind panel
-    lv_obj_add_flag(ui_MainMenu_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // hide blind panel
-    lv_obj_add_flag(ui_Info_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // hide blind panel
-    lv_obj_add_flag(ui_Utility_Panel_blindPanel, LV_OBJ_FLAG_HIDDEN); // unhide blind panel
+      UIStatusPayload msg = {
+        .type = STATUS_SCREEN_UNLOCK,
+      };
+      xQueueSend(ui_status_queue, &msg, 100); // send message
     resetScreenOffTimer(NULL);
   }
   last_click_time = current_time;  
@@ -681,7 +703,7 @@ void utilityMode(lv_event_t *e) {
   // performOnlineUpdate();
 }
 
-//--------------- CONFIGURATION  Menu ----------------------
+//-------------SAVE CONFIGURATION  Menu ----------------------
 // config screen close and save setting to preference
 void saveConfig(lv_event_t *e) {
   pref.begin("config", false);
@@ -702,10 +724,15 @@ void saveConfig(lv_event_t *e) {
   pref.putUChar("offset_hour", offset_hour_index);
   pref.putUChar("offset_minute", offset_minute_index);
   pref.putUChar("temp_unit", temp_unit);
-  // pref.putUChar("playing_mode", playMode);// no need, it save everytime toggle plyaing mode
+
+  //wifienable
+  pref.putBool("wifi_enable", wifiEnable);
+
   pref.end();
   SCREEN_OFF_TIMER = millis(); // reset timer
-  rtc.ntp_sync(UTC_offset_hour[offset_hour_index], UTC_offset_minute[offset_minute_index]); // set time again.
+  if (WiFi.status() == WL_CONNECTED) {//sync time if wifi connected
+      rtc.ntp_sync(UTC_offset_hour[offset_hour_index], UTC_offset_minute[offset_minute_index]);
+   }
 }
 
 // user save wifi credential
@@ -726,6 +753,33 @@ void scanNetwork(lv_event_t *e) {
   SCREEN_OFF_TIMER = millis(); // reset timer
   scanWiFi(true); // scan and update wifi list in dropdown
 }
+//toggle wifi on/off
+void toggleWiFi(lv_event_t * e) {
+  SCREEN_OFF_TIMER = millis(); // reset timer
+
+  if (wifiEnable) {//disabled
+    wifiEnable = false;
+    //delete wifi check timer
+    if (wifi_check_timer) lv_timer_del(wifi_check_timer);
+    if(wifiTaskHandle != NULL) {//kill wifi_connect_task
+      vTaskDelete(wifiTaskHandle);
+      wifiTaskHandle = NULL;
+    }
+    WiFi.disconnectAsync();
+    lv_label_set_text(ui_MainMenu_Label_connectStatus, "Disconnected");
+    lv_obj_set_style_text_color(ui_MainMenu_Label_connectStatus, lv_color_hex(0xFF0000), LV_PART_MAIN);
+    lv_obj_set_style_text_color(ui_Player_Label_WiFi, lv_color_hex(0x777777), LV_PART_MAIN);
+    log_d("WiFi Disconnected");
+
+  } else {//enabled
+
+    wifiEnable = true;
+    //start wifi check timer
+    wifi_check_timer = lv_timer_create(lvgl_wifi_check_cb, WIFI_CHECK_INTERVAL, NULL);//wifi status check interval timer
+  }
+}
+
+
 
 //---------------------------------------
 void readKeyboard(lv_event_t *e) {

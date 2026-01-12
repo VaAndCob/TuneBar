@@ -11,7 +11,7 @@
 #include <esp_ota_ops.h>
 
 const char *compile_date = __DATE__ " - " __TIME__;
-const char *current_version = "1.1.99";
+const char *current_version = "1.2.0";
 
 bool firmware_checked = false; // check firmware flag
 
@@ -425,7 +425,7 @@ static void notifyUpdate_ui(void *p) {
     lv_obj_t *msgBox = lv_msgbox_create(
         NULL,
         ctx->title,
-        "To update firmware, please click\nUtilities -> System Information",
+        "To update firmware, goto\nUtilities -> System Information",
         NULL,
         true
     );

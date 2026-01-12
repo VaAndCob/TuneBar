@@ -43,6 +43,7 @@
 #include "tca9554/tca9554.h" // io expander
 #include "weather/weather.h" // weather air quality widget
 #include "network/network.h" // wifi network
+#include "updater/updater.h"
 //#include "qmi8658/qmi8658.h" // imu
 
 
@@ -73,7 +74,7 @@ void setup() {
   randomSeed(esp_random());
   Serial.begin(115200);
   delay(100);
-  log_i("[TuneBar] by Va&Cob");
+  log_i("[TuneBar] by Va&Cob | V%s - %s", current_version, compile_date);
 
   // input pin
   pinMode(BOOT, INPUT_PULLUP); // volume down

@@ -29,12 +29,13 @@ uint8_t wallpaperIndex = 0;
 bool mute = false;
 
 #define WIFI_CHECK_INTERVAL 5000 //wifi connection checking interval 5 second.
+#define MAX_WALLPAPER 7 //number of wallpaper (including none)
 
 // set wallpaper dropdown menu
-const char *wallpaper_menu = "None\nThailand\nChristmas1\nChristmas2\nFuture\nNature\nUser1\nUser2\nUser3\nUser4\nUser5";
+const char *wallpaper_menu = "None\nThailand\nChristmas1\nChristmas2\nFuture\nBeach\nNature";
 // all wallaper image in c
-const lv_img_dsc_t *wallpaper_list[6] = {
-    NULL, &ui_img_wallpaper_thailand_png, &ui_img_wallpaper_christmas1_png, &ui_img_wallpaper_christmas2_png, &ui_img_wallpaper_future_png, &ui_img_wallpaper_nature_png,
+const lv_img_dsc_t *wallpaper_list[MAX_WALLPAPER] = {
+    NULL, &ui_img_wallpaper_thailand_png, &ui_img_wallpaper_christmas1_png, &ui_img_wallpaper_christmas2_png, &ui_img_wallpaper_future_png, &ui_img_wallpaper_beach_png, &ui_img_wallpaper_nature_png,
 };
 //wifi monitor call back from timer
 void lvgl_wifi_check_cb(lv_timer_t *t) {
@@ -515,7 +516,7 @@ void setWallpaper(lv_event_t *e) {
   lv_obj_t *widget = ui_MainMenu_Dropdown_Wallpaper;
   wallpaperIndex = lv_dropdown_get_selected(widget);
   const void *img_src = NULL; // default no wallpaper
-  if (wallpaperIndex < 6) // default wallper
+  if (wallpaperIndex < MAX_WALLPAPER) // default wallper
     img_src = wallpaper_list[wallpaperIndex];
   else { // user custom wallapper load from littleFS
   }

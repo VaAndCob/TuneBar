@@ -77,8 +77,8 @@ void setup() {
   log_i("[TuneBar] by Va&Cob | V%s - %s", current_version, compile_date);
 
   // input pin
-  pinMode(BOOT, INPUT_PULLUP); // volume down
-  pinMode(SYS_OUT, INPUT_PULLUP); // volume up
+  pinMode(BOOT, INPUT_PULLUP); // BOOT button
+  pinMode(SYS_OUT, INPUT_PULLUP); // Check Power Button Pressed
 
   // setup ADC
   analogReadResolution(12); // 9–13 bits supported

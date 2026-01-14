@@ -89,8 +89,8 @@ ESP32 RX ← ES7210 (ADC)
 #define ADC_BATT 4 
 
 //PIN
-#define SYS_OUT 16
-#define BOOT 0
-#define LCD_BL 8
+#define SYS_OUT 16  //Check Power Button Pressed
+#define BOOT 0      //BOOT button
+#define LCD_BL 8    //LCD backlight
 
 #endif

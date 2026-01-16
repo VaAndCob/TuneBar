@@ -26,6 +26,7 @@ SET(SOURCES screens/ui_Screen_Boot.c
     images/ui_img_images_mute_png.c
     images/ui_img_images_torch_png.c
     images/ui_img_images_systeminfo_png.c
+    images/ui_img_images_vaandcobbanner_png.c
     images/ui_img_images_qr_png.c
     images/ui_img_aqi_good_png.c
     images/ui_img_aqi_hazardous_png.c
@@ -51,9 +52,11 @@ SET(SOURCES screens/ui_Screen_Boot.c
     images/ui_img_numbers_minus_png.c
     images/ui_img_numbers_plus_png.c
     images/ui_img_numbers_slash_png.c
+    images/ui_img_wallpaper_beach_png.c
     images/ui_img_wallpaper_christmas1_png.c
     images/ui_img_wallpaper_christmas2_png.c
     images/ui_img_wallpaper_future_png.c
+    images/ui_img_wallpaper_nature_png.c
     images/ui_img_wallpaper_thailand_png.c
     images/ui_img_weather_clearnight_png.c
     images/ui_img_weather_cloudy_png.c
@@ -67,8 +70,6 @@ SET(SOURCES screens/ui_Screen_Boot.c
     images/ui_img_weather_sunny_png.c
     images/ui_img_weather_thunderstorm_png.c
     images/ui_img_weather_windy_png.c
-    images/ui_img_wallpaper_beach_png.c
-    images/ui_img_wallpaper_nature_png.c
     fonts/ui_font_NixieOne48.c
     fonts/ui_font_NotoSanThai16.c
     fonts/ui_font_NotoSanThai20.c)

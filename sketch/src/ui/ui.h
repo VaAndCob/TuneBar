@@ -61,6 +61,7 @@ LV_IMG_DECLARE( ui_img_custom_dog_left1_png);   // assets/custom/dog_left1.png
 LV_IMG_DECLARE( ui_img_images_mute_png);   // assets/images/mute.png
 LV_IMG_DECLARE( ui_img_images_torch_png);   // assets/images/torch.png
 LV_IMG_DECLARE( ui_img_images_systeminfo_png);   // assets/images/systeminfo.png
+LV_IMG_DECLARE( ui_img_images_vaandcobbanner_png);   // assets/images/vaandcobBanner.png
 LV_IMG_DECLARE( ui_img_images_qr_png);   // assets/images/qr.png
 LV_IMG_DECLARE( ui_img_aqi_good_png);   // assets/aqi/good.png
 LV_IMG_DECLARE( ui_img_aqi_hazardous_png);   // assets/aqi/hazardous.png
@@ -86,9 +87,11 @@ LV_IMG_DECLARE( ui_img_numbers_9_png);   // assets/numbers/9.png
 LV_IMG_DECLARE( ui_img_numbers_minus_png);   // assets/numbers/minus.png
 LV_IMG_DECLARE( ui_img_numbers_plus_png);   // assets/numbers/plus.png
 LV_IMG_DECLARE( ui_img_numbers_slash_png);   // assets/numbers/slash.png
+LV_IMG_DECLARE( ui_img_wallpaper_beach_png);   // assets/wallpaper/beach.png
 LV_IMG_DECLARE( ui_img_wallpaper_christmas1_png);   // assets/wallpaper/christmas1.png
 LV_IMG_DECLARE( ui_img_wallpaper_christmas2_png);   // assets/wallpaper/christmas2.png
 LV_IMG_DECLARE( ui_img_wallpaper_future_png);   // assets/wallpaper/future.png
+LV_IMG_DECLARE( ui_img_wallpaper_nature_png);   // assets/wallpaper/nature.png
 LV_IMG_DECLARE( ui_img_wallpaper_thailand_png);   // assets/wallpaper/thailand.png
 LV_IMG_DECLARE( ui_img_weather_clearnight_png);   // assets/weather/clearnight.png
 LV_IMG_DECLARE( ui_img_weather_cloudy_png);   // assets/weather/cloudy.png
@@ -102,8 +105,6 @@ LV_IMG_DECLARE( ui_img_weather_snow_png);   // assets/weather/snow.png
 LV_IMG_DECLARE( ui_img_weather_sunny_png);   // assets/weather/sunny.png
 LV_IMG_DECLARE( ui_img_weather_thunderstorm_png);   // assets/weather/thunderstorm.png
 LV_IMG_DECLARE( ui_img_weather_windy_png);   // assets/weather/windy.png
-LV_IMG_DECLARE( ui_img_wallpaper_beach_png);   // assets/wallpaper/beach.png
-LV_IMG_DECLARE( ui_img_wallpaper_nature_png);   // assets/wallpaper/nature.png
 
 // FONTS
 LV_FONT_DECLARE( ui_font_NixieOne48);

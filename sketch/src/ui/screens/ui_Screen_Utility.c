@@ -154,8 +154,8 @@ lv_obj_set_scrollbar_mode(ui_Utility_Panel_SystemInfo, LV_SCROLLBAR_MODE_OFF);
 lv_obj_set_style_radius(ui_Utility_Panel_SystemInfo, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_bg_color(ui_Utility_Panel_SystemInfo, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_bg_opa(ui_Utility_Panel_SystemInfo, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_bg_img_src( ui_Utility_Panel_SystemInfo, &ui_img_images_tunebar_banner_png, LV_PART_MAIN | LV_STATE_DEFAULT );
-lv_obj_set_style_bg_img_opa(ui_Utility_Panel_SystemInfo, 80, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_bg_img_src( ui_Utility_Panel_SystemInfo, &ui_img_images_vaandcobbanner_png, LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_bg_img_opa(ui_Utility_Panel_SystemInfo, 100, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_border_color(ui_Utility_Panel_SystemInfo, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_border_opa(ui_Utility_Panel_SystemInfo, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 

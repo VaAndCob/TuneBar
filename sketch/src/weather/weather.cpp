@@ -391,8 +391,9 @@ void updateWeatherPanelTask(void *parameter) {
     }
 
     // check of error  {"error":{"code":1006,"message":"No matching location found."}}
+    uint8_t usepa_index = doc["current"]["air_quality"]["us-epa-index"].as<uint8_t>();
     int errorCode = doc["error"]["code"].as<int>();
-    if (errorCode != 0) { // error occure
+    if (errorCode != 0 || usepa_index == 0) { // error occure
       log_e("Error code: %d %s", errorCode, doc["error"]["message"].as<const char *>());
       lv_label_set_text(ui_Info_Label_AQIlocation, "No data available");
       lv_img_set_src(ui_Info_Image_AQIimage, ""); // icon
@@ -440,7 +441,6 @@ void updateWeatherPanelTask(void *parameter) {
 
       log_d("Weather code: %d  Is day: %d", data.code, data.is_day);
 
-      log_i("INDEX: %d", data.usepa_index);
       // 3. calculate & update AQI values
       parseAQI(data.co, data.no2, data.o3, data.so2, data.pm2_5, data.pm10);
 

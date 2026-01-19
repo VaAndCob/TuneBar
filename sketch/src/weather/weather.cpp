@@ -440,6 +440,7 @@ void updateWeatherPanelTask(void *parameter) {
 
       log_d("Weather code: %d  Is day: %d", data.code, data.is_day);
 
+      log_i("INDEX: %d", data.usepa_index);
       // 3. calculate & update AQI values
       parseAQI(data.co, data.no2, data.o3, data.so2, data.pm2_5, data.pm10);
 

@@ -5,33 +5,34 @@
 
 #include "../ui.h"
 
-lv_obj_t *ui_Screen_Boot = NULL;
+lv_obj_t * ui_Screen_Boot = NULL;
 // event funtions
-void ui_event_Screen_Boot( lv_event_t * e) {
+void ui_event_Screen_Boot(lv_event_t * e)
+{
     lv_event_code_t event_code = lv_event_get_code(e);
 
-if ( event_code == LV_EVENT_SCREEN_LOADED) {
-      appStart( e );
-}
+    if(event_code == LV_EVENT_SCREEN_LOADED) {
+        appStart(e);
+    }
 }
 
 // build funtions
 
 void ui_Screen_Boot_screen_init(void)
 {
-ui_Screen_Boot = lv_obj_create(NULL);
-lv_obj_clear_flag( ui_Screen_Boot, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
-lv_obj_set_style_bg_img_src( ui_Screen_Boot, &ui_img_images_tunebar_banner_png, LV_PART_MAIN | LV_STATE_DEFAULT );
+    ui_Screen_Boot = lv_obj_create(NULL);
+    lv_obj_clear_flag(ui_Screen_Boot, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_img_src(ui_Screen_Boot, &ui_img_images_tunebar_banner_png, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-lv_obj_add_event_cb(ui_Screen_Boot, ui_event_Screen_Boot, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_Screen_Boot, ui_event_Screen_Boot, LV_EVENT_ALL, NULL);
 
 }
 
 void ui_Screen_Boot_screen_destroy(void)
 {
-   if (ui_Screen_Boot) lv_obj_del(ui_Screen_Boot);
+    if(ui_Screen_Boot) lv_obj_del(ui_Screen_Boot);
 
-// NULL screen variables
-ui_Screen_Boot= NULL;
+    // NULL screen variables
+    ui_Screen_Boot = NULL;
 
 }

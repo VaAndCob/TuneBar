@@ -378,7 +378,7 @@ void wifi_connect_task(void *param) {
               } // newfirmwareAvailable
             } // firmware checked
             updateWeatherPanel(); // update weather condition once after internet connected
-
+            break;
           } else { // Wifi not connected
             log_w("Wrong Wi-Fi password or timeout for %s", networkName);
             updateWiFiStatus("Wrong Wi-Fi password or timeout", 0xFF0000, 0x777777);

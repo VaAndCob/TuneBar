@@ -8,7 +8,7 @@ This project integrates a versatile music player and internet radio with practic
 ![TuneBar Example](document/showcase.jpg)
 
 
-## [🎬 Youtube](https://www.youtube.com/@vaandcob) Recommend watch the YouTube video for usage instructions.
+## [🎬 Youtube](https://www.youtube.com/watch?v=7HEO5P5ezfM) Recommend watch the YouTube video for usage instructions.
 
 ## ✅ Features
 

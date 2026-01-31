@@ -53,7 +53,7 @@ An example `station.csv` is available in the `/sketch/data` folder.
 The file should contain one station per line in the format: `Station Name,URL`.
 **Note:** Only `http` URLs are supported; `https` is not allowed.
 
-**Example `station.csv`:**
+**Example [stations.csv](https://github.com/VaAndCob/TuneBar/blob/main/sketch/data/stations.csv):**
 ```csv
 BBC Radio 1,http://stream.live.vc.bbcmedia.co.uk/bbc_radio_one
 Smooth Chill,http://media-the.musicradio.com/SmoothChillMP3
@@ -64,7 +64,7 @@ Smooth Chill,http://media-the.musicradio.com/SmoothChillMP3
 2.  Copy the file to the root directory of a FAT32 formatted microSD card.
 3.  Insert the SD card into the TuneBar device.
 4.  To upload, go to the **Config -> Radio** tab and click **UPLOAD**.
-download [stations.csv](https://github.com/VaAndCob/TuneBar/blob/main/sketch/data/stations.csv)
+
 
 ### 🎶 Media Player Support
 

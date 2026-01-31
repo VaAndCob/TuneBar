@@ -64,6 +64,7 @@ Smooth Chill,http://media-the.musicradio.com/SmoothChillMP3
 2.  Copy the file to the root directory of a FAT32 formatted microSD card.
 3.  Insert the SD card into the TuneBar device.
 4.  To upload, go to the **Config -> Radio** tab and click **UPLOAD**.
+download [stations.csv](https://github.com/VaAndCob/TuneBar/blob/main/sketch/data/stations.csv)
 
 ### 🎶 Media Player Support
 

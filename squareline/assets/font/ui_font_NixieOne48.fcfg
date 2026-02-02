@@ -1,0 +1,16 @@
+{
+  "codename": "NixieOne48",
+  "ttf_path": "/assets/font/NixieOne-Regular.ttf",
+  "bin_path": "/assets/font/ui_font_NixieOne48.bin",
+  "c_path": "/assets/font/ui_font_NixieOne48.c",
+  "cfg_path": "/assets/font/ui_font_NixieOne48.fcfg",
+  "size": 48,
+  "bpp": 2,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7f"
+  ],
+  "symbols": "",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

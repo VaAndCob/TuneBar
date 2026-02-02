@@ -36,6 +36,7 @@ This project integrates a versatile music player and internet radio with practic
 *   **Connectivity**: 2.4GHz Wi-Fi & Bluetooth 5 (LE)
 *   Core audio functionality is powered by the [ESP32-audioI2S](https://github.com/schreibfaul1/ESP32-audioI2S) library.
 *   IDE: VSCode + pioarduino IDE extension
+*   UI/UX: [SquareLine-Studio-1.6.0](https://squareline.io/)
 
 ## 🛒 Where to Buy (affiliate) [AliExpress](https://s.click.aliexpress.com/e/_c3F0TxcJ)
 

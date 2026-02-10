@@ -418,7 +418,7 @@ void audio_loop_task(void *param) {
 
      
       if (audio.isRunning()) {
-
+       // log_e("Volume: %u",audio.getVUlevel());
         current_pos = audio.getAudioCurrentTime();
         current_total = audio.getAudioFileDuration();
         if (current_pos != last_pos && current_total > 0) {

@@ -131,12 +131,16 @@ static bool endsWithIgnoreCase(const char *str, const char *suffix) {
   return true;
 }
 
-bool isAudioFile(const char *filename) {
-  if (!filename || filename[0] == '\0') return false;
-  // Skip macOS resource files
-  if (strncmp(filename, "._", 2) == 0) return false;
-  return endsWithIgnoreCase(filename, ".mp3") || endsWithIgnoreCase(filename, ".aac") || endsWithIgnoreCase(filename, ".flac") || endsWithIgnoreCase(filename, ".opus") || endsWithIgnoreCase(filename, ".vorbis") || endsWithIgnoreCase(filename, ".wav");
+static bool isAudioFile(const char *name) {
+    const char *ext = strrchr(name, '.');
+    if (!ext) return false;
+
+    return strcasecmp(ext, ".mp3") == 0 ||
+           strcasecmp(ext, ".wav") == 0 ||
+           strcasecmp(ext, ".aac") == 0 ||
+           strcasecmp(ext, ".flac") == 0;
 }
+
 
 // ==========================================
 // NEW: Recursive Directory Scanner that SAVES TO FILE
@@ -147,69 +151,77 @@ static void scanDirRecursive(
     uint8_t level,
     File &playlist,
     char *pathBuf,
-    size_t pathBufSize
+    size_t pathBufLen
 ) {
     File dir = fs.open(currentDir);
     if (!dir || !dir.isDirectory()) {
+        dir.close();
         return;
     }
 
-    File entry;
-    while ((entry = dir.openNextFile())) {
+    while (true) {
+        File entry = dir.openNextFile();
+        if (!entry) break;
 
-        const char *entryName = entry.name();
+        const char *entryPath = entry.name();  // FULL path on SD
+        const char *base = strrchr(entryPath, '/');
+        base = base ? base + 1 : entryPath;    // basename ONLY
+
+        // Build full child path into pathBuf
+        if (strcmp(currentDir, "/") == 0) {
+            snprintf(pathBuf, pathBufLen, "/%s", base);
+        } else {
+            snprintf(pathBuf, pathBufLen, "%s/%s", currentDir, base);
+        }
 
         if (entry.isDirectory()) {
 
-            // Skip hidden/system directories
-            if (entryName[0] != '.' && level > 0) {
-                int n = snprintf(
-                    pathBuf,
-                    pathBufSize,
-                    "%s/%s",
-                    currentDir,
-                    entryName
-                );
+            if (base[0] != '.' && level > 0) {
+                char childDir[PATH_BUF_LEN];
+                strncpy(childDir, pathBuf, sizeof(childDir));
+                childDir[sizeof(childDir) - 1] = '\0';
 
-                if (n > 0 && n < (int)pathBufSize) {
-                    scanDirRecursive(fs, pathBuf, level - 1, playlist, pathBuf, pathBufSize);
-                }
+                scanDirRecursive(
+                    fs,
+                    childDir,          // ✅ stable copy
+                    level - 1,
+                    playlist,
+                    pathBuf,
+                    pathBufLen
+                );
             }
 
         } else {
-            if (isAudioFile(entryName)) {
-                int n = snprintf(
-                    pathBuf,
-                    pathBufSize,
-                    "%s/%s",
-                    currentDir,
-                    entryName
-                );
 
-                if (n > 0 && n < (int)pathBufSize) {
-                    playlist.println(pathBuf);
-                    log_d("Add: %s", pathBuf);
-                }
+            if (isAudioFile(base)) {
+                playlist.println(pathBuf);
+                log_d("-> %s", pathBuf);
             }
         }
 
         entry.close();
-        vTaskDelay(1); // yield to avoid WDT
+        vTaskDelay(1);
     }
 
     dir.close();
 }
+
+
+
+
 //create music_playlist.txt
 void generatePlaylistFile(fs::FS &sourceFs, const char *dirname, uint8_t levels) {
 
+    LittleFS.remove(PLAYLIST_FILE);
     File playlist = LittleFS.open(PLAYLIST_FILE, FILE_WRITE);
+
+  
     if (!playlist) {
         log_e("Failed to open playlist file for writing!");
         return;
     }
 
-    // Allocate ONE buffer (PSRAM is fine)
-    char *pathBuf = (char*)heap_caps_malloc(PATH_BUF_LEN, MALLOC_CAP_SPIRAM);
+    char *pathBuf = (char *)heap_caps_malloc(PATH_BUF_LEN, MALLOC_CAP_SPIRAM);
     if (!pathBuf) {
         log_e("Failed to allocate path buffer");
         playlist.close();
@@ -217,19 +229,21 @@ void generatePlaylistFile(fs::FS &sourceFs, const char *dirname, uint8_t levels)
     }
 
     log_d("Scanning directory: %s", dirname);
+scanDirRecursive(
+    sourceFs,
+    dirname,      // "/" typically
+    levels,
+    playlist,
+    pathBuf,
+    PATH_BUF_LEN
+);
 
-    scanDirRecursive(
-        sourceFs,
-        dirname,
-        levels,
-        playlist,
-        pathBuf,
-        PATH_BUF_LEN
-    );
+
     heap_caps_free(pathBuf);
     playlist.close();
     log_d("Playlist file %s generation complete.", PLAYLIST_FILE);
 }
+
 
 // ==========================================
 // NEW: Low-RAM function to count lines (tracks)

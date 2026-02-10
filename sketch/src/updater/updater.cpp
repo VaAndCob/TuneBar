@@ -11,7 +11,7 @@
 #include <esp_ota_ops.h>
 
 const char *compile_date = __DATE__ " - " __TIME__;
-const char *current_version = "1.1.0";
+const char *current_version = "1.2.1";
 
 bool firmware_checked = false; // check firmware flag
 
@@ -450,7 +450,7 @@ static void notifyUpdate_ui(void *p) {
         [](lv_event_t *e) {
             NotifyUpdateCtx *ctx = (NotifyUpdateCtx *)lv_event_get_user_data(e);
             if (!ctx) return;
-
+            //force screen keep turn on if there is notification
             SCREEN_OFF_DELAY = ctx->prev_screen_delay;
             SCREEN_OFF_TIMER = millis();
             BL_OFF = false;

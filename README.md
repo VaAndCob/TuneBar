@@ -1,5 +1,5 @@
 # 🎧🕺💃👯💫[ TuneBar ]💫👯🕺💃🎧
-![Version](https://img.shields.io/badge/version-1.2.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.1-blue)
 
 **TuneBar** is a custom-engineered, palm-sized media bar powered by the ESP32-S3. Its compact, stick-like design allows it to sit on your table or travel with you anywhere. Developed with a focus on original software design, it features a unique, self-designed UI/UX and custom code implementations tailored for performance.
 

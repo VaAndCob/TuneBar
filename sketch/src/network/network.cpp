@@ -239,22 +239,21 @@ void scanWiFi(bool updateList) {
   } else {
     // --- Synchronous (Blocking) Scan ---
     log_d("Preparing for blocking scan...");
-    // 1. บังคับปิดและลบข้อมูลสแกนเดิม
-    WiFi.scanDelete();
-    WiFi.disconnect(true); // ปิดการเชื่อมต่อเดิมทั้งหมด
-    WiFi.mode(WIFI_OFF); // ปิดวิทยุชั่วคราว
+    
+    WiFi.scanDelete();// 1. force close and rescan
+    WiFi.disconnect(true); // close all connection
+    WiFi.mode(WIFI_OFF); // temporaly turn off radio
     vTaskDelay(pdMS_TO_TICKS(100));
-    // 2. เริ่มต้นระบบ Wi-Fi ใหม่
-    WiFi.mode(WIFI_STA);
-    vTaskDelay(pdMS_TO_TICKS(200)); // ให้เวลา Driver ตื่นขึ้นมา
+    
+    WiFi.mode(WIFI_STA);// 2. restat wifi again
+    vTaskDelay(pdMS_TO_TICKS(200));
     log_d("Scanning for Wi-Fi networks (blocking): ");
-    // 3. สั่งสแกน
-    int16_t scanResult = WiFi.scanNetworks();
+    
+    int16_t scanResult = WiFi.scanNetworks();// 3. scan the network
 
     if (scanResult < 0) {
       log_e("Scan failed with error code: %d", scanResult);
-      // ถ้ายังล้มเหลว ลองสั่ง WiFi.scanDelete() อีกรอบเพื่อ Reset
-      WiFi.scanDelete();
+      WiFi.scanDelete();// if failed try scandelete again
       networks = 0;
     } else {
       networks = (uint8_t)scanResult;
@@ -321,7 +320,7 @@ void wifi_connect_task(void *param) {
           if (strcmp(stored, ss) == 0) {
             if (matchCount < sizeof(matchIndex)) {
               matchIndex[matchCount++] = k;
-              log_d("Match found: %s", ss.c_str());
+              log_d("Match found: %s", ss);
             } else {
               log_w("More matches than buffer; ignoring extras");
             }

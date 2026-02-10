@@ -38,7 +38,7 @@ void initSongList();
 
 //------------ RADIO
 
-#define MAX_STATION_LIST_LENGTH 50
+#define MAX_STATION_LIST_LENGTH 50 //Note! too large station list lenght will reduce LB heap. this make problem with wifi 
 #define RADIO_NAME_LEN 64
 #define RADIO_URL_LEN  128
 #define LINE_BUF_LEN   512

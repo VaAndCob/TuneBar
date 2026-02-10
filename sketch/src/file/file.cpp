@@ -350,7 +350,9 @@ void initSongList() {
 
 //------------------- Streaming Radio ----------------------------------
 // load station list from files "stations.csv" or default
-radios stations[MAX_STATION_LIST_LENGTH];
+//radios stations[MAX_STATION_LIST_LENGTH];
+radios *stations = nullptr;
+
 int16_t stationIndex = 0;
 uint8_t stationListLength = 0;
 
@@ -396,69 +398,144 @@ bool parseCSVLine(const char *line, char *name, size_t nameSize, char *url, size
   return true;
 }
 
+bool initStationsPSRAM() {
+  if (stations) return true;   // already initialized
+
+  stations = (radios *)heap_caps_malloc(
+      sizeof(radios) * MAX_STATION_LIST_LENGTH,
+      MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT
+  );
+
+  if (!stations) {
+    log_e("PSRAM allocation failed for stations[]");
+    return false;
+  }
+
+  memset(stations, 0, sizeof(radios) * MAX_STATION_LIST_LENGTH);
+  log_i("%d stations[] allocated in PSRAM", MAX_STATION_LIST_LENGTH);
+  return true;
+}
+
+
 // load station list from littleFS or default
 void loadStationList() {
+
+  // ---------- ENSURE PSRAM ----------
+  if (!initStationsPSRAM()) {
+    lv_textarea_add_text(ui_MainMenu_Textarea_stationList,
+                         LV_SYMBOL_CLOSE " PSRAM allocation failed\n");
+    return;
+  }
+
   stationListLength = 0;
   lv_textarea_set_text(ui_MainMenu_Textarea_stationList, "");
 
   char *lineBuf = (char *)heap_caps_malloc(LINE_BUF_LEN, MALLOC_CAP_SPIRAM);
+  if (!lineBuf) {
+    log_e("Failed to allocate lineBuf in PSRAM");
+    return;
+  }
+
   size_t lineLen = 0;
 
+  // =====================================================
+  // LOAD DEFAULT CSV (PROGMEM)
+  // =====================================================
   if (!LittleFS.exists(STATION_LIST_FILENAME)) {
-    // ---------- LOAD DEFAULT (PROGMEM) ----------
-    lv_textarea_add_text(ui_MainMenu_Textarea_stationList, LV_SYMBOL_FILE " Load DEFAULT " MACRO_TO_STRING(STATION_LIST_FILENAME) "\n");
+
+    lv_textarea_add_text(
+      ui_MainMenu_Textarea_stationList,
+      LV_SYMBOL_FILE " Load DEFAULT " MACRO_TO_STRING(STATION_LIST_FILENAME) "\n"
+    );
+
     log_d("Load DEFAULT %s", STATION_LIST_FILENAME);
 
-    for (uint32_t i = 0; i < strlen_P(defaultStationsCSV); i++) {
+    size_t csvLen = strlen_P(defaultStationsCSV);
+
+    for (size_t i = 0; i < csvLen && stationListLength < MAX_STATION_LIST_LENGTH; i++) {
       char c = pgm_read_byte_near(defaultStationsCSV + i);
 
       if (c == '\n' || lineLen >= LINE_BUF_LEN - 1) {
         lineBuf[lineLen] = '\0';
 
-        if (stationListLength < MAX_STATION_LIST_LENGTH && parseCSVLine(lineBuf, stations[stationListLength].name, sizeof(stations[stationListLength].name), stations[stationListLength].url, sizeof(stations[stationListLength].url))) {
+        if (parseCSVLine(
+              lineBuf,
+              stations[stationListLength].name,
+              sizeof(stations[stationListLength].name),
+              stations[stationListLength].url,
+              sizeof(stations[stationListLength].url))) {
           stationListLength++;
         }
+
         lineLen = 0;
       } else {
         lineBuf[lineLen++] = c;
       }
     }
 
-    // Handle last line (no trailing newline)
+    // Handle final line (no trailing newline)
     if (lineLen > 0 && stationListLength < MAX_STATION_LIST_LENGTH) {
       lineBuf[lineLen] = '\0';
-      if (parseCSVLine(lineBuf, stations[stationListLength].name, sizeof(stations[stationListLength].name), stations[stationListLength].url, sizeof(stations[stationListLength].url))) {
+      if (parseCSVLine(
+            lineBuf,
+            stations[stationListLength].name,
+            sizeof(stations[stationListLength].name),
+            stations[stationListLength].url,
+            sizeof(stations[stationListLength].url))) {
         stationListLength++;
       }
     }
 
-  } else {
-    // ---------- LOAD USER CSV (LittleFS) ----------
-    lv_textarea_add_text(ui_MainMenu_Textarea_stationList, LV_SYMBOL_FILE " Load USER " MACRO_TO_STRING(STATION_LIST_FILENAME) "\n");
-    log_d("Load USER " MACRO_TO_STRING(STATION_LIST_FILENAME));
+  }
+  // =====================================================
+  // LOAD USER CSV (LittleFS)
+  // =====================================================
+  else {
+
+    lv_textarea_add_text(
+      ui_MainMenu_Textarea_stationList,
+      LV_SYMBOL_FILE " Load USER " MACRO_TO_STRING(STATION_LIST_FILENAME) "\n"
+    );
+
+    log_d("Load USER %s", STATION_LIST_FILENAME);
 
     File f = LittleFS.open(STATION_LIST_FILENAME, "r");
     if (!f) {
-      lv_textarea_add_text(ui_MainMenu_Textarea_stationList, LV_SYMBOL_CLOSE " Cannot open " MACRO_TO_STRING(STATION_LIST_FILENAME) "\n");
+      lv_textarea_add_text(
+        ui_MainMenu_Textarea_stationList,
+        LV_SYMBOL_CLOSE " Cannot open " MACRO_TO_STRING(STATION_LIST_FILENAME) "\n"
+      );
+      heap_caps_free(lineBuf);
       return;
     }
 
     while (f.available() && stationListLength < MAX_STATION_LIST_LENGTH) {
+
       lineLen = f.readBytesUntil('\n', lineBuf, LINE_BUF_LEN - 1);
       lineBuf[lineLen] = '\0';
 
       if (lineLen == 0) continue;
 
-      if (parseCSVLine(lineBuf, stations[stationListLength].name, sizeof(stations[stationListLength].name), stations[stationListLength].url, sizeof(stations[stationListLength].url))) {
+      if (parseCSVLine(
+            lineBuf,
+            stations[stationListLength].name,
+            sizeof(stations[stationListLength].name),
+            stations[stationListLength].url,
+            sizeof(stations[stationListLength].url))) {
         stationListLength++;
       }
     }
+
     f.close();
   }
 
-  // ---------- PRINT SUMMARY ----------
+  heap_caps_free(lineBuf);
+
+  // =====================================================
+  // UI SUMMARY
+  // =====================================================
   char txt[96];
-  for (int i = 0; i < stationListLength; i++) {
+  for (uint8_t i = 0; i < stationListLength; i++) {
     snprintf(txt, sizeof(txt), "%d: %s\n", i + 1, stations[i].name);
     lv_textarea_add_text(ui_MainMenu_Textarea_stationList, txt);
   }

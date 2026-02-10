@@ -11,7 +11,7 @@
 #include <esp_ota_ops.h>
 
 const char *compile_date = __DATE__ " - " __TIME__;
-const char *current_version = "1.2.1";
+const char *current_version = "1.2.0";
 
 bool firmware_checked = false; // check firmware flag
 

@@ -48,7 +48,7 @@ typedef struct {
     char url[RADIO_URL_LEN];
 } radios;
 
-extern radios stations[MAX_STATION_LIST_LENGTH];
+extern radios *stations;
 extern int16_t stationIndex;
 extern uint8_t stationListLength;
 extern uint8_t playMode;
